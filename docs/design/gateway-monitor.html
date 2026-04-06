@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Exe OS Gateway Monitor - Foundry Bold</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&amp;family=Manrope:wght@400;500&amp;family=Space+Grotesk:wght@700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#0F0E1A",
+            "surface": "#1A1832",
+            "sidebar": "#0E0D19",
+            "primary": "#F5D76E", // Gold accent
+            "on-primary": "#0F0E1A",
+            "text-primary": "#F0EDE8",
+            "text-secondary": "#A09CAF",
+            "outline": "transparent",
+          },
+          fontFamily: {
+            "headline": ["Epilogue", "sans-serif"],
+            "body": ["Manrope", "sans-serif"],
+            "label": ["Space Grotesk", "sans-serif"],
+          },
+          borderRadius: {
+            "DEFAULT": "0px",
+            "sm": "2px",
+            "md": "4px",
+            "lg": "4px",
+            "xl": "4px",
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #0F0E1A;
+      color: #F0EDE8;
+      font-family: 'Manrope', sans-serif;
+    }
+    .font-headline {
+      font-family: 'Epilogue', sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+    .font-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+    .selection-indicator {
+      border-left: 2px solid #F5D76E;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0E0D19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1A1832;
+    }
+  </style>
+</head>
+<body class="selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-sidebar flex justify-between items-center px-6 py-4 w-full">
+<div class="flex items-center gap-4">
+<span class="text-xl font-headline text-text-primary">Exe OS</span>
+<div class="h-4 w-[2px] bg-text-secondary/20 hidden md:block"></div>
+<h1 class="hidden md:block font-headline text-sm text-text-secondary">Gateway Monitor</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4 items-center">
+<span class="material-symbols-outlined text-text-secondary hover:text-primary cursor-pointer transition-colors">notifications</span>
+<span class="material-symbols-outlined text-text-secondary hover:text-primary cursor-pointer transition-colors">settings</span>
+</div>
+<img alt="User Profile" class="w-8 h-8 rounded-sm ring-1 ring-primary/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRgApUXOHzcmm9cw9kDYXlolSrsQ2zVaOanCDUah9zja6Ya8V6eWqx7ktrm8n5CS2PVKOLahm5KoGNTC4mc_bLH6L9mJFdwptOIFYgAbSYYjuTA0gxvxyN_o4zoBsDQ3ma7wnwDYEzN8NwpnFyS6JU4CpWJ6iDxvXlX3Xbqrvb6Ssz2bTf8zkl7wYpqgKu5ZGr2cYA3d_dCQQB5XLqEH6mjeGdT6mgy0dJPXTErjFXB91WCFdydBioLyX9ccDO-HLNS61kKTJNEYg"/>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full hidden md:flex flex-col pt-20 pb-6 w-64 bg-sidebar z-40">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 p-3 bg-surface rounded-sm">
+<div class="w-2 h-2 bg-primary"></div>
+<div>
+<p class="text-[10px] font-label text-text-secondary">Gateway</p>
+<p class="text-[10px] font-label text-primary">Active</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 bg-surface text-primary selection-indicator px-6 py-4 font-label text-xs transition-all" href="#">
+<span class="material-symbols-outlined text-sm">hub</span>
+<span>Gateway</span>
+</a>
+<a class="flex items-center gap-3 text-text-secondary px-6 py-4 hover:text-text-primary hover:bg-surface/50 transition-all font-label text-xs" href="#">
+<span class="material-symbols-outlined text-sm">lan</span>
+<span>Nodes</span>
+</a>
+<a class="flex items-center gap-3 text-text-secondary px-6 py-4 hover:text-text-primary hover:bg-surface/50 transition-all font-label text-xs" href="#">
+<span class="material-symbols-outlined text-sm">shield_with_heart</span>
+<span>Security</span>
+</a>
+<a class="flex items-center gap-3 text-text-secondary px-6 py-4 hover:text-text-primary hover:bg-surface/50 transition-all font-label text-xs" href="#">
+<span class="material-symbols-outlined text-sm">terminal</span>
+<span>Logs</span>
+</a>
+</nav>
+<div class="px-6 mt-auto pt-6">
+<button class="w-full mb-6 bg-primary text-on-primary font-label text-xs py-4 rounded-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+        Deploy Node
+      </button>
+<a class="flex items-center gap-3 text-text-secondary py-3 hover:text-text-primary transition-colors font-label text-[10px]" href="#">
+<span class="material-symbols-outlined text-sm">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 text-text-secondary py-3 hover:text-text-primary transition-colors font-label text-[10px]" href="#">
+<span class="material-symbols-outlined text-sm">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pt-24 pb-24 md:pb-12 px-8">
+<!-- Subheader Action Bar -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+<div>
+<div class="flex items-center gap-3 mb-4">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-sm text-[10px] font-label flex items-center gap-2">
+<span class="w-2 h-2 bg-primary"></span>
+            3 Active Channels
+          </span>
+</div>
+<h2 class="text-6xl font-headline text-text-primary">System Intelligence</h2>
+</div>
+<div class="flex items-center bg-surface p-1 rounded-sm">
+<button class="px-4 py-2 text-[10px] font-label text-text-secondary hover:text-text-primary transition-colors">Real-time</button>
+<button class="px-6 py-2 text-[10px] font-label bg-primary text-on-primary rounded-sm shadow-sm">Last 24h</button>
+<button class="px-4 py-2 text-[10px] font-label text-text-secondary hover:text-text-primary transition-colors">7 Days</button>
+</div>
+</div>
+<!-- Stat Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+<!-- Stat 1 -->
+<div class="bg-surface p-6 rounded-sm">
+<p class="text-[10px] font-label text-text-secondary mb-4">Active Conversations</p>
+<div class="flex items-end justify-between">
+<h3 class="text-4xl font-headline text-primary">12</h3>
+<div class="flex items-center text-primary font-label text-[10px]">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>
+            +3
+          </div>
+</div>
+</div>
+<!-- Stat 2 -->
+<div class="bg-surface p-6 rounded-sm">
+<p class="text-[10px] font-label text-text-secondary mb-4">Messages Today</p>
+<div class="flex items-end justify-between">
+<h3 class="text-4xl font-headline text-text-primary">847</h3>
+<div class="flex items-center text-primary font-label text-[10px]">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>
+            12%
+          </div>
+</div>
+</div>
+<!-- Stat 3 -->
+<div class="bg-surface p-6 rounded-sm">
+<p class="text-[10px] font-label text-text-secondary mb-4">Avg Response Time</p>
+<div class="flex items-end justify-between">
+<h3 class="text-4xl font-headline text-text-primary">1.2s</h3>
+<div class="flex items-center text-primary font-label text-[10px]">
+<span class="material-symbols-outlined text-xs">arrow_downward</span>
+            -0.3s
+          </div>
+</div>
+</div>
+<!-- Stat 4 -->
+<div class="bg-surface p-6 rounded-sm">
+<p class="text-[10px] font-label text-text-secondary mb-4">Satisfaction</p>
+<div class="flex items-end justify-between">
+<h3 class="text-4xl font-headline text-text-primary">4.8/5</h3>
+<div class="flex items-center text-text-secondary font-label text-[10px]">
+            Steady
+          </div>
+</div>
+</div>
+</div>
+<!-- Middle Section Panels -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
+<!-- Live Conversations -->
+<div class="lg:col-span-5 bg-surface rounded-sm flex flex-col overflow-hidden max-h-[520px]">
+<div class="p-6 bg-surface/50 flex justify-between items-center">
+<h4 class="font-headline text-lg">Live Conversations</h4>
+<span class="material-symbols-outlined text-text-secondary cursor-pointer hover:text-primary">filter_list</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Item 1 -->
+<div class="p-4 bg-background/40 selection-indicator hover:bg-background/60 transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label text-primary">WhatsApp</span>
+<span class="text-xs font-medium text-text-primary">Sarah M.</span>
+</div>
+<span class="text-[10px] font-label text-text-secondary">2m ago</span>
+</div>
+<p class="text-sm text-text-secondary italic mb-3">"Asking about pricing plans"</p>
+<div class="flex items-center justify-between">
+<span class="text-[9px] font-label px-2 py-0.5 bg-primary/10 text-primary rounded-sm">gateway-bot</span>
+<div class="w-1.5 h-1.5 bg-primary"></div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="p-4 bg-background/40 selection-indicator hover:bg-background/60 transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label text-primary">Web Chat</span>
+<span class="text-xs font-medium text-text-primary">James K.</span>
+</div>
+<span class="text-[10px] font-label text-text-secondary">5m ago</span>
+</div>
+<p class="text-sm text-text-secondary italic mb-3">"Technical support request"</p>
+<div class="flex items-center justify-between">
+<span class="text-[9px] font-label px-2 py-0.5 bg-primary/10 text-primary rounded-sm">gateway-bot</span>
+<div class="w-1.5 h-1.5 bg-primary"></div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="p-4 bg-background/40 border-l-2 border-text-secondary/30 hover:bg-background/60 transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label text-text-secondary">Signal</span>
+<span class="text-xs font-medium text-text-primary">Anonymous</span>
+</div>
+<span class="text-[10px] font-label text-text-secondary">12m ago</span>
+</div>
+<p class="text-sm text-text-secondary italic mb-3">"Product inquiry"</p>
+<div class="flex items-center justify-between">
+<span class="text-[9px] font-label px-2 py-0.5 bg-primary/10 text-primary rounded-sm">gateway-bot</span>
+<div class="w-1.5 h-1.5 bg-text-secondary/50"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Message Volume Chart -->
+<div class="lg:col-span-7 bg-surface rounded-sm p-6 flex flex-col">
+<div class="flex justify-between items-start mb-10">
+<div>
+<h4 class="font-headline text-lg">Message Volume</h4>
+<p class="text-[10px] font-label text-text-secondary mt-1">24H Traffic Pattern</p>
+</div>
+<div class="flex gap-6">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-primary"></div>
+<span class="text-[9px] font-label text-text-secondary">Bot</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-text-secondary/30"></div>
+<span class="text-[9px] font-label text-text-secondary">Human</span>
+</div>
+</div>
+</div>
+<div class="flex-1 flex items-end justify-between gap-2 h-48">
+<!-- Custom bar chart with tonal shifts -->
+<div class="flex-1 flex flex-col justify-end gap-0.5 h-full group">
+<div class="w-full bg-primary/40 h-[40%] transition-opacity group-hover:opacity-100 opacity-80"></div>
+<div class="w-full bg-text-secondary/10 h-[10%]"></div>
+<span class="text-[8px] font-label mt-3 text-center text-text-secondary">08:00</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-0.5 h-full group">
+<div class="w-full bg-primary/40 h-[65%] transition-opacity group-hover:opacity-100 opacity-80"></div>
+<div class="w-full bg-text-secondary/10 h-[15%]"></div>
+<span class="text-[8px] font-label mt-3 text-center text-text-secondary">10:00</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-0.5 h-full group">
+<div class="w-full bg-primary/40 h-[90%] transition-opacity group-hover:opacity-100 opacity-80"></div>
+<div class="w-full bg-text-secondary/10 h-[25%]"></div>
+<span class="text-[8px] font-label mt-3 text-center text-text-secondary">12:00</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-0.5 h-full group">
+<div class="w-full bg-primary h-[100%]"></div>
+<div class="w-full bg-text-secondary/10 h-[20%]"></div>
+<span class="text-[8px] font-label mt-3 text-center text-text-secondary">14:00</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-0.5 h-full group">
+<div class="w-full bg-primary/40 h-[70%] transition-opacity group-hover:opacity-100 opacity-80"></div>
+<div class="w-full bg-text-secondary/10 h-[30%]"></div>
+<span class="text-[8px] font-label mt-3 text-center text-text-secondary">16:00</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-0.5 h-full group">
+<div class="w-full bg-primary/40 h-[50%] transition-opacity group-hover:opacity-100 opacity-80"></div>
+<div class="w-full bg-text-secondary/10 h-[20%]"></div>
+<span class="text-[8px] font-label mt-3 text-center text-text-secondary">18:00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Section: Channel Health -->
+<h4 class="font-headline text-lg mb-8">Channel Health</h4>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Channel 1 -->
+<div class="bg-surface p-6 rounded-sm selection-indicator group hover:bg-surface/80 transition-all">
+<div class="flex justify-between items-start mb-8">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-primary/10">
+<span class="material-symbols-outlined text-primary text-xl">chat_bubble</span>
+</div>
+<h5 class="font-label text-xs text-text-primary">WhatsApp</h5>
+</div>
+<span class="text-[9px] font-label px-2 py-1 bg-background text-text-secondary rounded-sm">Twilio</span>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<div class="w-2 h-2 bg-primary"></div>
+<span class="text-[10px] font-label text-primary">Connected</span>
+</div>
+<p class="text-4xl font-headline text-text-primary mb-1">456</p>
+<p class="text-[9px] font-label text-text-secondary">Msgs Today</p>
+</div>
+<!-- Channel 2 -->
+<div class="bg-surface p-6 rounded-sm selection-indicator group hover:bg-surface/80 transition-all">
+<div class="flex justify-between items-start mb-8">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-primary/10">
+<span class="material-symbols-outlined text-primary text-xl">web</span>
+</div>
+<h5 class="font-label text-xs text-text-primary">Web Chat</h5>
+</div>
+<span class="text-[9px] font-label px-2 py-1 bg-background text-text-secondary rounded-sm">Local</span>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<div class="w-2 h-2 bg-primary"></div>
+<span class="text-[10px] font-label text-primary">Active</span>
+</div>
+<p class="text-4xl font-headline text-text-primary mb-1">312</p>
+<p class="text-[9px] font-label text-text-secondary">Msgs Today</p>
+</div>
+<!-- Channel 3 -->
+<div class="bg-surface p-6 rounded-sm border-l-2 border-text-secondary/20 group hover:bg-surface/80 transition-all">
+<div class="flex justify-between items-start mb-8">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-text-secondary/10">
+<span class="material-symbols-outlined text-text-secondary text-xl">shield</span>
+</div>
+<h5 class="font-label text-xs text-text-primary">Signal</h5>
+</div>
+<span class="text-[9px] font-label px-2 py-1 bg-background text-text-secondary rounded-sm">API</span>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<div class="w-2 h-2 bg-text-secondary/30"></div>
+<span class="text-[10px] font-label text-text-secondary">Limited</span>
+</div>
+<p class="text-4xl font-headline text-text-primary mb-1">79</p>
+<p class="text-[9px] font-label text-text-secondary">Msgs Today</p>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 bg-sidebar border-t border-surface flex justify-around items-center px-4 py-4">
+<a class="flex flex-col items-center text-primary" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label text-[8px] mt-1">Monitor</span>
+</a>
+<a class="flex flex-col items-center text-text-secondary" href="#">
+<span class="material-symbols-outlined">emergency_home</span>
+<span class="font-label text-[8px] mt-1">Alerts</span>
+</a>
+<a class="flex flex-col items-center text-text-secondary" href="#">
+<span class="material-symbols-outlined">language</span>
+<span class="font-label text-[8px] mt-1">Network</span>
+</a>
+<a class="flex flex-col items-center text-text-secondary" href="#">
+<span class="material-symbols-outlined">settings_input_component</span>
+<span class="font-label text-[8px] mt-1">Config</span>
+</a>
+</nav>
+</body></html>

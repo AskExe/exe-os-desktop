@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EXE_OS | Memory Explorer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&amp;family=Manrope:wght@400;500;600&amp;family=Space+Grotesk:wght@700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #0F0E1A;
+      color: #F0EDE8;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .headline-bold {
+      font-family: 'Epilogue', sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+    .label-meta {
+      font-family: 'Space+Grotesk', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#F5D76E",
+            "on-primary": "#0F0E1A",
+            "surface": "#1A1832",
+            "background": "#0F0E1A",
+            "sidebar": "#0E0D19",
+            "primary-text": "#F0EDE8",
+            "secondary-text": "#A09CAF",
+          },
+          fontFamily: {
+            "headline": ["Epilogue"],
+            "body": ["Manrope"],
+            "label": ["Space Grotesk"],
+            "mono": ["Geist Mono"]
+          },
+          borderRadius: {"DEFAULT": "2px", "lg": "4px", "xl": "4px", "full": "4px"},
+        },
+      },
+    }
+  </script>
+</head>
+<body class="font-body selection:bg-primary/30 selection:text-on-primary">
+<!-- SideNavBar Anchor -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-sidebar flex flex-col py-8 z-50">
+<div class="px-6 mb-10 flex items-center gap-3">
+<div class="w-8 h-8 bg-primary flex items-center justify-center rounded-[4px]">
+<span class="material-symbols-outlined text-on-primary font-black">hub</span>
+</div>
+<div>
+<h1 class="headline-bold text-primary text-lg">Neural Cartographer</h1>
+<p class="label-meta text-[10px] text-secondary-text mt-1">v2.4.0-STABLE</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center px-4 py-3 text-secondary-text hover:text-primary-text hover:bg-surface transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">dashboard</span>
+<span class="label-meta text-[10px]">Dashboard</span>
+</a>
+<a class="flex items-center px-4 py-3 text-secondary-text hover:text-primary-text hover:bg-surface transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">smart_toy</span>
+<span class="label-meta text-[10px]">Agents</span>
+</a>
+<a class="flex items-center px-4 py-3 text-secondary-text hover:text-primary-text hover:bg-surface transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">forum</span>
+<span class="label-meta text-[10px]">Chat</span>
+</a>
+<!-- Active State Logic: Memory -->
+<a class="flex items-center px-4 py-3 bg-surface text-primary border-l-2 border-primary transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">memory</span>
+<span class="label-meta text-[10px]">Memory</span>
+</a>
+<a class="flex items-center px-4 py-3 text-secondary-text hover:text-primary-text hover:bg-surface transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">terminal</span>
+<span class="label-meta text-[10px]">Logs</span>
+</a>
+<a class="flex items-center px-4 py-3 text-secondary-text hover:text-primary-text hover:bg-surface transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">settings</span>
+<span class="label-meta text-[10px]">Settings</span>
+</a>
+<a class="flex items-center px-4 py-3 text-secondary-text hover:text-primary-text hover:bg-surface transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">help_outline</span>
+<span class="label-meta text-[10px]">Support</span>
+</a>
+</nav>
+<div class="px-6 mt-auto">
+<button class="w-full bg-primary text-on-primary py-3 rounded-[4px] label-meta text-xs mb-6 active:scale-[0.98] transition-transform">
+        INITIATE_SCAN
+      </button>
+<a class="flex items-center px-4 py-3 text-secondary-text hover:text-primary-text hover:bg-surface transition-all group duration-150" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]">description</span>
+<span class="label-meta text-[10px]">Docs</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Layout -->
+<main class="ml-64 flex min-h-screen bg-background">
+<!-- Center Column: Memory List -->
+<div class="flex-1 flex flex-col min-w-0">
+<!-- TopNavBar Anchor -->
+<header class="h-16 bg-background flex justify-between items-center px-8 w-full sticky top-0 z-40">
+<div class="flex items-center gap-4 flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary-text/50">search</span>
+<input class="w-full bg-surface border-none rounded-[4px] pl-10 pr-4 py-2 text-sm text-primary-text focus:ring-1 focus:ring-primary placeholder:text-secondary-text/30 font-body" placeholder="SEARCH MEMORIES..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-6">
+<button class="w-10 h-10 flex items-center justify-center text-secondary-text hover:text-primary-text transition-colors">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary-text hover:text-primary-text transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-[4px] overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="professional male profile photo with neutral expression and soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnl9WfQRT4HhInLbZU8VoC1q-RfnN_-V2TJeqlkml5sZS-j1VtZXCtbTOPcZTdfMrElDzW7_2RT3CL8ki08Q2QHeD5VdZIY_rqMUmq2QJEasa5xHx-zcNAGANr6yNpyadloyGfxV_OA9XmXtUIvImI0_bKZ0t3LUh2iS__zT3t4c0ZV0ytmxtCb0-srWLRw1mEj2BexGr-_3IlKzIMZ-T6UXAyawQSH6i56HYLVfqpZFEcMcpoo6K9S7csaemB3kDJPHSRsQqIxsA"/>
+</div>
+</div>
+</header>
+<div class="p-8 overflow-y-auto no-scrollbar">
+<div class="flex justify-between items-end mb-10">
+<div>
+<h2 class="headline-bold text-5xl text-primary-text">Memory Explorer</h2>
+<div class="flex items-center gap-4 mt-4">
+<span class="label-meta text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-[4px]">18,241 MEMORIES</span>
+<span class="label-meta text-xs text-secondary-text">STORAGE: 4.2GB / 10GB</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface hover:bg-surface/80 text-primary-text px-4 py-2 rounded-[4px] label-meta text-[10px] flex items-center gap-2 transition-colors">
+              ALL AGENTS <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="bg-surface hover:bg-surface/80 text-primary-text px-4 py-2 rounded-[4px] label-meta text-[10px] flex items-center gap-2 transition-colors">
+              ALL PROJECTS <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-[4px] label-meta text-[10px] flex items-center gap-2 transition-colors">
+              FILTER <span class="material-symbols-outlined text-sm">filter_list</span>
+</button>
+</div>
+</div>
+<div class="space-y-4">
+<!-- Memory Card 1 (Active/Selected) -->
+<div class="group bg-surface border-l-2 border-primary p-6 rounded-r-[4px] hover:bg-surface/80 transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<span class="label-meta text-[10px] px-2 py-0.5 bg-primary/20 text-primary rounded-[4px]">CODE DECISION</span>
+<span class="label-meta text-[10px] text-secondary-text">ID: MEM_82F1</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="label-meta text-[10px] text-secondary-text">2H AGO</span>
+<div class="flex items-center gap-2">
+<span class="label-meta text-[10px] text-primary">0.94</span>
+<div class="w-16 h-1 bg-background rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 94%"></div>
+</div>
+</div>
+</div>
+</div>
+<p class="text-primary-text leading-relaxed text-base font-body mb-6">Chose SQLCipher over plain SQLite for memory encryption — AES-256-GCM at rest, zero-config for end users.</p>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">face</span>
+<span class="label-meta text-[10px] text-secondary-text">YOSHI</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary-text/50">terminal</span>
+<span class="label-meta text-[10px] text-secondary-text">EXE-OS</span>
+</div>
+</div>
+</div>
+<!-- Memory Card 2 -->
+<div class="group bg-surface/60 border-l-2 border-transparent p-6 rounded-r-[4px] hover:bg-surface transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<span class="label-meta text-[10px] px-2 py-0.5 bg-secondary-text/10 text-secondary-text rounded-[4px]">REVIEW</span>
+<span class="label-meta text-[10px] text-secondary-text">ID: MEM_A922</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="label-meta text-[10px] text-secondary-text">4H AGO</span>
+<div class="flex items-center gap-2">
+<span class="label-meta text-[10px] text-primary-text">0.91</span>
+<div class="w-16 h-1 bg-background rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 91%"></div>
+</div>
+</div>
+</div>
+</div>
+<p class="text-primary-text/80 leading-relaxed text-base font-body mb-6">Approved yoshi's intercom queue PR. Clean implementation, good test coverage.</p>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary-text/50">smart_toy</span>
+<span class="label-meta text-[10px] text-secondary-text">EXE</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary-text/50">terminal</span>
+<span class="label-meta text-[10px] text-secondary-text">EXE-OS</span>
+</div>
+</div>
+</div>
+<!-- Memory Card 3 -->
+<div class="group bg-surface/60 border-l-2 border-transparent p-6 rounded-r-[4px] hover:bg-surface transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<span class="label-meta text-[10px] px-2 py-0.5 bg-secondary-text/10 text-secondary-text rounded-[4px]">CONTENT</span>
+<span class="label-meta text-[10px] text-secondary-text">ID: MEM_C01B</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="label-meta text-[10px] text-secondary-text">6H AGO</span>
+<div class="flex items-center gap-2">
+<span class="label-meta text-[10px] text-primary-text">0.87</span>
+<div class="w-16 h-1 bg-background rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 87%"></div>
+</div>
+</div>
+</div>
+</div>
+<p class="text-primary-text/80 leading-relaxed text-base font-body mb-6">CTA analysis complete — 'Start Free' outperforms 'Get Started' by 23% in A/B tests.</p>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary-text/50">palette</span>
+<span class="label-meta text-[10px] text-secondary-text">MARI</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary-text/50">campaign</span>
+<span class="label-meta text-[10px] text-secondary-text">MARKETING</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Memory Details -->
+<aside class="w-96 bg-sidebar flex flex-col sticky top-0 h-screen overflow-y-auto no-scrollbar">
+<div class="p-8">
+<div class="flex items-center justify-between mb-10">
+<h3 class="headline-bold text-2xl text-primary-text">Memory Details</h3>
+<button class="text-secondary-text hover:text-primary-text transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Detail Header -->
+<div class="mb-10">
+<div class="flex items-center gap-5 mb-6">
+<div class="w-14 h-14 rounded-[4px] bg-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl">psychology</span>
+</div>
+<div>
+<div class="label-meta text-[10px] text-primary mb-1">MEM_82F1_ACTIVE</div>
+<div class="headline-bold text-xl text-primary-text">Vector Allocation</div>
+</div>
+</div>
+<div class="p-5 bg-surface rounded-[4px]">
+<p class="text-sm text-primary-text/90 leading-relaxed font-body">
+              "Chose SQLCipher over plain SQLite for memory encryption — AES-256-GCM at rest, zero-config for end users. Deployment target is standard OS-X and Ubuntu instances. Key rotation occurs every 90 epochs."
+            </p>
+</div>
+</div>
+<!-- Embeddings Visualization -->
+<div class="mb-10">
+<label class="label-meta text-[10px] text-secondary-text mb-4 block">Neural Mapping</label>
+<div class="aspect-square bg-surface rounded-[4px] relative overflow-hidden flex items-center justify-center">
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 1px 1px, #F0EDE8 1px, transparent 0); background-size: 24px 24px;"></div>
+<div class="relative w-full h-full p-8">
+<!-- Cluster Center -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full blur-[4px]"></div>
+<!-- Satellites -->
+<div class="absolute top-1/3 left-1/4 w-1.5 h-1.5 bg-primary/40 rounded-full"></div>
+<div class="absolute top-2/3 left-1/3 w-2 h-2 bg-primary/20 rounded-full"></div>
+<div class="absolute top-1/4 right-1/4 w-1.5 h-1.5 bg-primary/30 rounded-full"></div>
+<!-- Connection Lines -->
+<svg class="absolute inset-0 w-full h-full opacity-10 pointer-events-none">
+<line stroke="#F5D76E" stroke-width="1" x1="50%" x2="25%" y1="50%" y2="33%"></line>
+<line stroke="#F5D76E" stroke-width="1" x1="50%" x2="33%" y1="50%" y2="66%"></line>
+<line stroke="#F5D76E" stroke-width="1" x1="50%" x2="75%" y1="50%" y2="25%"></line>
+</svg>
+</div>
+<div class="absolute bottom-4 right-4">
+<span class="label-meta text-[8px] text-secondary-text/40">DIM: 1536</span>
+</div>
+</div>
+</div>
+<!-- Metadata Grid -->
+<div class="mb-10">
+<label class="label-meta text-[10px] text-secondary-text mb-4 block">System Metadata</label>
+<div class="grid grid-cols-2 gap-[1px] bg-surface rounded-[4px] overflow-hidden">
+<div class="bg-sidebar p-4">
+<div class="label-meta text-[9px] text-secondary-text/50 mb-1">Created</div>
+<div class="label-meta text-[10px] text-primary-text">2023.10.24</div>
+</div>
+<div class="bg-sidebar p-4">
+<div class="label-meta text-[9px] text-secondary-text/50 mb-1">Access</div>
+<div class="label-meta text-[10px] text-primary-text">142 Times</div>
+</div>
+<div class="bg-sidebar p-4">
+<div class="label-meta text-[9px] text-secondary-text/50 mb-1">Decay</div>
+<div class="label-meta text-[10px] text-primary">0.02% / Day</div>
+</div>
+<div class="bg-sidebar p-4">
+<div class="label-meta text-[9px] text-secondary-text/50 mb-1">Hash</div>
+<div class="label-meta text-[10px] text-primary-text">0xEF...82A</div>
+</div>
+</div>
+</div>
+<!-- Related Memories -->
+<div>
+<label class="label-meta text-[10px] text-secondary-text mb-4 block">Related Memories</label>
+<div class="space-y-2">
+<div class="p-4 bg-surface hover:bg-surface/70 transition-colors rounded-[4px] cursor-pointer group">
+<div class="flex justify-between mb-2">
+<span class="label-meta text-[9px] text-primary">0.89 SIMILARITY</span>
+<span class="label-meta text-[9px] text-secondary-text/40">1W AGO</span>
+</div>
+<p class="text-xs text-secondary-text font-body line-clamp-1 group-hover:text-primary-text">DATABASE SCHEMA DESIGN FOR LOCAL VAULT...</p>
+</div>
+<div class="p-4 bg-surface hover:bg-surface/70 transition-colors rounded-[4px] cursor-pointer group">
+<div class="flex justify-between mb-2">
+<span class="label-meta text-[9px] text-primary">0.82 SIMILARITY</span>
+<span class="label-meta text-[9px] text-secondary-text/40">2W AGO</span>
+</div>
+<p class="text-xs text-secondary-text font-body line-clamp-1 group-hover:text-primary-text">SECURITY AUDIT: IDENTIFYING PLAIN-TEXT...</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-8 right-[26rem] bg-primary text-on-primary w-12 h-12 rounded-[4px] shadow-2xl hover:scale-105 active:scale-95 transition-all z-40 flex items-center justify-center">
+<span class="material-symbols-outlined">vertical_align_top</span>
+</button>
+</body></html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Exe Foundry - Task Board</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&amp;family=Manrope:wght@400;500;700&amp;family=Space+Grotesk:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              background: '#0F0E1A',
+              surface: '#1A1832',
+              sidebar: '#0E0D19',
+              gold: '#F5D76E',
+              primary: '#F0EDE8',
+              secondary: '#A09CAF',
+            },
+            fontFamily: {
+              "headline": ["Epilogue", "sans-serif"],
+              "body": ["Manrope", "sans-serif"],
+              "label": ["Space Grotesk", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "4px",
+              "sm": "2px",
+              "md": "4px",
+              "lg": "4px",
+              "xl": "4px",
+            },
+            letterSpacing: {
+              "headline": "-0.03em",
+              "label": "0.2em",
+            },
+            lineHeight: {
+              "headline": "0.95",
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        background-color: #0F0E1A;
+        color: #F0EDE8;
+      }
+      .font-headline {
+        text-transform: uppercase;
+        letter-spacing: -0.03em;
+        line-height: 0.95;
+      }
+      .font-label {
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #0E0D19;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #332F5C;
+        border-radius: 4px;
+      }
+      .selection-indicator {
+        border-left: 2px solid #F5D76E;
+      }
+    </style>
+</head>
+<body class="font-body text-primary flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-full bg-sidebar w-64 shrink-0">
+<div class="p-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-gold flex items-center justify-center">
+<span class="material-symbols-outlined text-background font-bold text-lg">token</span>
+</div>
+<div>
+<h1 class="font-headline font-900 text-xl text-gold">EXE FOUNDRY</h1>
+<p class="text-[9px] font-label text-secondary mt-1">CORE ORCHESTRATOR</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-2 mt-4">
+<a class="flex items-center gap-4 px-4 py-3 rounded text-secondary font-medium text-xs hover:bg-surface hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined text-xl">grid_view</span>
+<span class="font-label text-[10px]">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded bg-surface selection-indicator text-gold font-bold text-xs transition-all" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">Account_Tree</span>
+<span class="font-label text-[10px]">Tasks</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded text-secondary font-medium text-xs hover:bg-surface hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined text-xl">Psychology</span>
+<span class="font-label text-[10px]">Employees</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded text-secondary font-medium text-xs hover:bg-surface hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined text-xl">Storage</span>
+<span class="font-label text-[10px]">Vault</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded text-secondary font-medium text-xs hover:bg-surface hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined text-xl">Terminal</span>
+<span class="font-label text-[10px]">Logs</span>
+</a>
+</nav>
+<div class="p-4 bg-background/50">
+<div class="px-4 py-3 mb-4">
+<span class="inline-flex items-center gap-2 text-[9px] font-label text-gold bg-gold/5 px-2 py-1 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-gold animate-pulse"></span>
+                System: Operational
+            </span>
+</div>
+<a class="flex items-center gap-4 px-4 py-3 rounded text-secondary font-medium text-xs hover:bg-surface transition-all" href="#">
+<span class="material-symbols-outlined text-xl">Settings</span>
+<span class="font-label text-[10px]">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-w-0 bg-background">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-8 h-20 w-full bg-background border-b border-surface">
+<div class="flex items-center gap-8">
+<h2 class="font-headline text-2xl font-900 text-primary">TASK BOARD</h2>
+<div class="hidden md:flex items-center gap-3 bg-surface rounded px-4 py-2 border border-transparent focus-within:border-gold/30 transition-all">
+<span class="material-symbols-outlined text-secondary text-lg">Search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-primary placeholder-secondary/50 w-64" placeholder="SEARCH DIRECTIVES..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="flex items-center gap-2 bg-gold hover:opacity-90 text-background font-bold px-6 py-2.5 rounded font-label text-[11px] transition-all">
+<span class="material-symbols-outlined text-lg">Add</span>
+                Initialize Task
+            </button>
+<div class="flex items-center gap-3">
+<button class="p-2 text-secondary hover:text-gold transition-all">
+<span class="material-symbols-outlined">Notifications</span>
+</button>
+<button class="p-1 border border-surface rounded hover:border-gold transition-all">
+<div class="w-8 h-8 bg-surface rounded flex items-center justify-center font-label text-[10px] text-primary">AD</div>
+</button>
+</div>
+</div>
+</header>
+<!-- Toolbar -->
+<div class="px-8 py-4 flex flex-wrap items-center gap-4 bg-background/50">
+<button class="flex items-center gap-3 px-4 py-2 bg-surface text-secondary hover:text-primary transition-all">
+<span class="font-label text-[10px]">Operations</span>
+<span class="material-symbols-outlined text-sm">Keyboard_Arrow_Down</span>
+</button>
+<button class="flex items-center gap-3 px-4 py-2 bg-surface text-secondary hover:text-primary transition-all">
+<span class="font-label text-[10px]">Entity</span>
+<span class="material-symbols-outlined text-sm">Keyboard_Arrow_Down</span>
+</button>
+<button class="flex items-center gap-3 px-4 py-2 bg-surface text-secondary hover:text-primary transition-all">
+<span class="font-label text-[10px]">Priority</span>
+<span class="material-symbols-outlined text-sm">Keyboard_Arrow_Down</span>
+</button>
+<div class="ml-auto flex items-center gap-3 font-label text-[9px] text-secondary">
+<span class="material-symbols-outlined text-sm">Filter_Alt</span>
+            View: KANBAN_V2
+        </div>
+</div>
+<!-- Kanban Board -->
+<div class="flex-1 overflow-x-auto p-8 custom-scrollbar">
+<div class="flex gap-8 h-full min-w-max">
+<!-- COLUMN: Queue -->
+<div class="w-80 flex flex-col gap-6">
+<div class="flex items-center justify-between px-2">
+<div class="flex items-center gap-3">
+<h3 class="font-headline font-700 text-sm text-secondary">In Queue</h3>
+<span class="px-2 py-0.5 bg-surface text-primary rounded font-label text-[9px]">04</span>
+</div>
+<button class="text-secondary/50 hover:text-gold"><span class="material-symbols-outlined text-lg">More_Horiz</span></button>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
+<!-- Task Card -->
+<div class="bg-surface p-5 rounded hover:translate-y-[-2px] transition-all cursor-pointer group shadow-xl">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[9px] font-label font-bold text-background bg-gold px-2 py-0.5 rounded">P01_CRITICAL</span>
+<span class="text-[9px] font-label text-secondary">EXE_KERNEL</span>
+</div>
+<h4 class="text-sm font-bold text-primary mb-6 group-hover:text-gold transition-colors leading-relaxed">Memory compaction race condition in core_alpha_09</h4>
+<div class="flex justify-between items-center pt-4 border-t border-background/30">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-background flex items-center justify-center text-[9px] font-label text-secondary border border-surface">YS</div>
+<span class="text-[9px] font-label text-secondary">Yoshi.exe</span>
+</div>
+<span class="material-symbols-outlined text-secondary/30 text-sm">Link</span>
+</div>
+</div>
+<!-- Task Card -->
+<div class="bg-surface p-5 rounded hover:translate-y-[-2px] transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[9px] font-label font-bold text-gold border border-gold/30 px-2 py-0.5 rounded">P02_HIGH</span>
+<span class="text-[9px] font-label text-secondary">MARKETING</span>
+</div>
+<h4 class="text-sm font-bold text-primary mb-6 leading-relaxed">Synthesis technical brief: Architecture of Exe OS</h4>
+<div class="flex items-center gap-2 pt-4 border-t border-background/30">
+<div class="w-6 h-6 rounded bg-background flex items-center justify-center text-[9px] font-label text-secondary border border-surface">MA</div>
+<span class="text-[9px] font-label text-secondary">Mari.sh</span>
+</div>
+</div>
+</div>
+</div>
+<!-- COLUMN: Processing -->
+<div class="w-80 flex flex-col gap-6">
+<div class="flex items-center justify-between px-2">
+<div class="flex items-center gap-3">
+<h3 class="font-headline font-700 text-sm text-gold">Processing</h3>
+<span class="px-2 py-0.5 bg-gold/10 text-gold rounded font-label text-[9px]">02</span>
+</div>
+<button class="text-secondary/50 hover:text-gold"><span class="material-symbols-outlined text-lg">More_Horiz</span></button>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
+<!-- Task Card Active -->
+<div class="bg-surface p-5 rounded border border-gold/20 selection-indicator transition-all cursor-pointer group shadow-2xl">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-2">
+<span class="text-[9px] font-label font-bold text-background bg-gold px-2 py-0.5 rounded">P01</span>
+<span class="text-[9px] font-label text-gold bg-gold/5 px-2 py-0.5 rounded flex items-center gap-1.5">
+<span class="w-1 h-1 rounded-full bg-gold animate-ping"></span>
+                                    02:45:12
+                                </span>
+</div>
+<span class="text-[9px] font-label text-secondary">INTERCOM</span>
+</div>
+<h4 class="text-sm font-bold text-primary mb-6 leading-relaxed">Initialize queue synthesis for Intercom gateway</h4>
+<div class="flex items-center gap-2 pt-4 border-t border-background/30">
+<div class="w-6 h-6 rounded bg-background flex items-center justify-center text-[9px] font-label text-secondary border border-surface">YS</div>
+<span class="text-[9px] font-label text-secondary">Yoshi.exe</span>
+</div>
+</div>
+</div>
+</div>
+<!-- COLUMN: Audit -->
+<div class="w-80 flex flex-col gap-6">
+<div class="flex items-center justify-between px-2">
+<div class="flex items-center gap-3">
+<h3 class="font-headline font-700 text-sm text-primary">System Audit</h3>
+<span class="px-2 py-0.5 bg-surface text-primary rounded font-label text-[9px]">01</span>
+</div>
+<button class="text-secondary/50 hover:text-gold"><span class="material-symbols-outlined text-lg">More_Horiz</span></button>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
+<div class="bg-surface p-5 rounded border border-surface transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[9px] font-label font-bold text-gold border border-gold/30 px-2 py-0.5 rounded">P02</span>
+<span class="text-[9px] font-label text-secondary">EXE_CORE</span>
+</div>
+<h4 class="text-sm font-bold text-primary mb-4 leading-relaxed">Auto-injection of review directives</h4>
+<div class="bg-background p-3 rounded mb-4">
+<span class="text-[9px] font-label text-gold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">Verified_User</span>
+                                Auditor: EXE_CORE_01
+                            </span>
+</div>
+<div class="flex items-center gap-2 pt-4 border-t border-background/30">
+<div class="w-6 h-6 rounded bg-background flex items-center justify-center text-[9px] font-label text-secondary border border-surface">YS</div>
+<span class="text-[9px] font-label text-secondary">Yoshi.exe</span>
+</div>
+</div>
+</div>
+</div>
+<!-- COLUMN: Committed -->
+<div class="w-80 flex flex-col gap-6 opacity-50 grayscale">
+<div class="flex items-center justify-between px-2">
+<div class="flex items-center gap-3">
+<h3 class="font-headline font-700 text-sm text-secondary">Committed</h3>
+<span class="px-2 py-0.5 bg-surface text-secondary rounded font-label text-[9px]">12</span>
+</div>
+<button class="text-secondary/50 hover:text-gold"><span class="material-symbols-outlined text-lg">More_Horiz</span></button>
+</div>
+<div class="flex flex-col gap-4">
+<div class="bg-surface p-5 rounded">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[9px] font-label font-bold text-secondary border border-secondary/20 px-2 py-0.5 rounded">P02</span>
+<span class="material-symbols-outlined text-gold text-lg">Check_Circle</span>
+</div>
+<h4 class="text-sm font-bold text-secondary line-through mb-4">Port intercom protocols to OSS branch</h4>
+<div class="flex items-center gap-2 pt-4 border-t border-background/30">
+<div class="w-6 h-6 rounded bg-background flex items-center justify-center text-[9px] font-label text-secondary">YS</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ADD COLUMN -->
+<div class="w-12 h-full flex items-start pt-2">
+<button class="w-12 h-12 rounded bg-surface border border-dashed border-secondary/20 text-secondary hover:text-gold hover:border-gold transition-all flex items-center justify-center">
+<span class="material-symbols-outlined">Add</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Telemetry -->
+<div class="fixed bottom-8 right-8">
+<div class="bg-surface shadow-2xl rounded p-4 flex items-center gap-6 border-l-4 border-gold">
+<div class="flex flex-col">
+<span class="text-[8px] font-label text-secondary">VELOCITY_LOG</span>
+<span class="text-xs font-bold text-gold">12.4 OPS/DAY</span>
+</div>
+<div class="h-8 w-[1px] bg-background"></div>
+<div class="flex flex-col">
+<span class="text-[8px] font-label text-secondary">SYSTEM_LOAD</span>
+<span class="text-xs font-bold text-primary">84.2%</span>
+</div>
+</div>
+</div>
+</body></html>
