@@ -1,54 +1,5 @@
-import React, { useState } from "react";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface Employee {
-  name: string;
-  role: string;
-  status: "active" | "working" | "idle" | "offline";
-  memoryCount: number;
-  currentProject?: string;
-  recentTasks: string[];
-  reportsTo?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Demo data
-// ---------------------------------------------------------------------------
-
-const DEMO_EMPLOYEES: Employee[] = [
-  {
-    name: "exe", role: "COO", status: "active", memoryCount: 1240,
-    currentProject: "exe-os",
-    recentTasks: ["Review: tom — Rebrand exe-wiki", "Dispatch parallel tasks to tom", "Status brief for founder"],
-  },
-  {
-    name: "yoshi", role: "CTO", status: "working", memoryCount: 3820,
-    currentProject: "exe-os",
-    recentTasks: ["Config versioning — auto-migration", "Harness boundary CI test", "Confidence scoring on memory facts"],
-    reportsTo: "exe",
-  },
-  {
-    name: "tom", role: "Principal Engineer", status: "working", memoryCount: 2150,
-    currentProject: "exe-os-desktop",
-    recentTasks: ["Desktop Work tab — task dashboard", "Wire agent loop into TUI", "PostCompact + InstructionsLoaded hooks"],
-    reportsTo: "yoshi",
-  },
-  {
-    name: "mari", role: "CMO", status: "idle", memoryCount: 680,
-    currentProject: undefined,
-    recentTasks: ["Brand audit — exe-wiki colors", "SEO content strategy draft"],
-    reportsTo: "exe",
-  },
-  {
-    name: "sasha", role: "Content Specialist", status: "offline", memoryCount: 310,
-    currentProject: undefined,
-    recentTasks: ["Landing page hero B-roll", "Product demo video script"],
-    reportsTo: "exe",
-  },
-];
+import React, { useState, useEffect } from "react";
+import { fetchEmployees, type Employee } from "../services/exeOsData.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -182,20 +133,26 @@ const s = {
 // ---------------------------------------------------------------------------
 
 export function TeamView() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedName, setSelectedName] = useState<string | null>(null);
-  const selected = DEMO_EMPLOYEES.find((e) => e.name === selectedName) ?? null;
+
+  useEffect(() => {
+    fetchEmployees().then(({ employees: e }) => setEmployees(e));
+  }, []);
+
+  const selected = employees.find((e) => e.name === selectedName) ?? null;
 
   return (
     <div style={s.container}>
       <div style={s.sectionTitle}>
-        {DEMO_EMPLOYEES.length} Employees
+        {employees.length} Employees
       </div>
 
       <div style={{ display: "flex", gap: 8, flex: 1, minHeight: 0 }}>
         {/* Left: cards grid */}
         <div style={{ flex: 1, overflow: "auto" }}>
           <div style={s.grid}>
-            {DEMO_EMPLOYEES.map((emp) => (
+            {employees.map((emp) => (
               <div
                 key={emp.name}
                 style={s.card(selectedName === emp.name)}

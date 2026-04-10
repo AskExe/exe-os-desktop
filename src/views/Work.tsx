@@ -1,82 +1,8 @@
-import React, { useState, useMemo } from "react";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface Task {
-  id: string;
-  title: string;
-  status: "open" | "in_progress" | "done" | "blocked";
-  priority: "p0" | "p1" | "p2";
-  assignedTo: string;
-  project: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import React, { useState, useMemo, useEffect } from "react";
+import { fetchTasks, type Task } from "../services/exeOsData.js";
 
 type StatusFilter = "all" | Task["status"];
 type PriorityFilter = "all" | Task["priority"];
-
-// ---------------------------------------------------------------------------
-// Demo data
-// ---------------------------------------------------------------------------
-
-const DEMO_TASKS: Task[] = [
-  {
-    id: "1", title: "Wire agent loop into TUI CommandCenter",
-    status: "done", priority: "p1", assignedTo: "tom",
-    project: "exe-os", createdAt: "2026-04-10T05:40:00Z", updatedAt: "2026-04-10T06:12:00Z",
-  },
-  {
-    id: "2", title: "Rebrand exe-wiki frontend — Exe Foundry Bold",
-    status: "done", priority: "p0", assignedTo: "tom",
-    project: "exe-wiki", createdAt: "2026-04-10T01:35:00Z", updatedAt: "2026-04-10T01:44:00Z",
-  },
-  {
-    id: "3", title: "Desktop Work tab — task management dashboard",
-    status: "in_progress", priority: "p1", assignedTo: "tom",
-    project: "exe-os-desktop", createdAt: "2026-04-10T07:00:00Z", updatedAt: "2026-04-10T07:05:00Z",
-  },
-  {
-    id: "4", title: "Brand audit — exe-wiki colors and typography",
-    status: "open", priority: "p1", assignedTo: "mari",
-    project: "exe-wiki", createdAt: "2026-04-10T01:38:00Z", updatedAt: "2026-04-10T01:38:00Z",
-  },
-  {
-    id: "5", title: "GraphRAG confidence scoring — decay + corroboration",
-    status: "done", priority: "p1", assignedTo: "yoshi",
-    project: "exe-os", createdAt: "2026-04-09T20:00:00Z", updatedAt: "2026-04-09T23:30:00Z",
-  },
-  {
-    id: "6", title: "Fix auth middleware — session token compliance",
-    status: "blocked", priority: "p0", assignedTo: "tom",
-    project: "myapp", createdAt: "2026-04-08T10:00:00Z", updatedAt: "2026-04-09T14:00:00Z",
-  },
-  {
-    id: "7", title: "Landing page hero section — video embed",
-    status: "open", priority: "p2", assignedTo: "sasha",
-    project: "exe-landing-page", createdAt: "2026-04-09T16:00:00Z", updatedAt: "2026-04-09T16:00:00Z",
-  },
-  {
-    id: "8", title: "Config versioning — auto-migration + forward compat",
-    status: "done", priority: "p1", assignedTo: "yoshi",
-    project: "exe-os", createdAt: "2026-04-09T18:00:00Z", updatedAt: "2026-04-10T00:15:00Z",
-  },
-];
-
-const REVIEW_TASKS: Task[] = [
-  {
-    id: "r1", title: "Review: tom — Rebrand exe-wiki frontend",
-    status: "open", priority: "p0", assignedTo: "exe",
-    project: "exe-wiki", createdAt: "2026-04-10T01:45:00Z", updatedAt: "2026-04-10T01:45:00Z",
-  },
-  {
-    id: "r2", title: "Review: yoshi — Config versioning",
-    status: "done", priority: "p1", assignedTo: "exe",
-    project: "exe-os", createdAt: "2026-04-10T00:20:00Z", updatedAt: "2026-04-10T00:30:00Z",
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -274,29 +200,38 @@ const s = {
 // ---------------------------------------------------------------------------
 
 export function WorkView() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [reviewTasks, setReviewTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  useEffect(() => {
+    fetchTasks().then(({ tasks: t, reviewTasks: r }) => {
+      setTasks(t);
+      setReviewTasks(r);
+    });
+  }, []);
+
   const filtered = useMemo(() => {
-    return DEMO_TASKS.filter((t) => {
+    return tasks.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
       return true;
     });
-  }, [statusFilter, priorityFilter]);
+  }, [tasks, statusFilter, priorityFilter]);
 
   const selected = useMemo(
-    () => [...DEMO_TASKS, ...REVIEW_TASKS].find((t) => t.id === selectedId) ?? null,
-    [selectedId],
+    () => [...tasks, ...reviewTasks].find((t) => t.id === selectedId) ?? null,
+    [tasks, reviewTasks, selectedId],
   );
 
   const counts = useMemo(() => ({
-    total: DEMO_TASKS.length,
-    inProgress: DEMO_TASKS.filter((t) => t.status === "in_progress").length,
-    blocked: DEMO_TASKS.filter((t) => t.status === "blocked").length,
-    done: DEMO_TASKS.filter((t) => t.status === "done").length,
-  }), []);
+    total: tasks.length,
+    inProgress: tasks.filter((t) => t.status === "in_progress").length,
+    blocked: tasks.filter((t) => t.status === "blocked").length,
+    done: tasks.filter((t) => t.status === "done").length,
+  }), [tasks]);
 
   return (
     <div style={s.container}>
@@ -359,7 +294,7 @@ export function WorkView() {
 
           {/* Reviews section */}
           <div style={{ ...s.sectionTitle, marginTop: 16 }}>Pending Reviews</div>
-          {REVIEW_TASKS.filter((t) => t.status === "open").map((task) => (
+          {reviewTasks.filter((t) => t.status === "open").map((task) => (
             <div
               key={task.id}
               style={s.taskRow(selectedId === task.id)}

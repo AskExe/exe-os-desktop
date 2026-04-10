@@ -1,27 +1,5 @@
-import React, { useState } from "react";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface Provider {
-  name: string;
-  status: "active" | "configured" | "not_set";
-  apiKey: string;
-  model: string;
-  models: string[];
-}
-
-// ---------------------------------------------------------------------------
-// Demo data
-// ---------------------------------------------------------------------------
-
-const DEMO_PROVIDERS: Provider[] = [
-  { name: "Anthropic", status: "active", apiKey: "sk-ant-•••••••••••••8f2", model: "claude-sonnet-4-20250514", models: ["claude-opus-4-6-20250610", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"] },
-  { name: "OpenCode", status: "configured", apiKey: "oc-•••••••••••••4a1", model: "claude-sonnet-4-20250514", models: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"] },
-  { name: "Gemini", status: "not_set", apiKey: "", model: "", models: ["gemini-2.0-flash", "gemini-2.5-pro"] },
-  { name: "OpenAI", status: "not_set", apiKey: "", model: "", models: ["gpt-4o", "gpt-4o-mini"] },
-];
+import React, { useState, useEffect } from "react";
+import { fetchProviders, fetchConfig, type Provider, type AppConfig } from "../services/exeOsData.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -198,19 +176,33 @@ const s = {
 // ---------------------------------------------------------------------------
 
 export function SettingsView() {
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [autoIngestion, setAutoIngestion] = useState(true);
   const [autoRetrieval, setAutoRetrieval] = useState(true);
   const [splashEffect, setSplashEffect] = useState(true);
   const [searchMode, setSearchMode] = useState("hybrid");
-  const [licenseKey, setLicenseKey] = useState("EXE-PRO-•••••••••-4F2A");
+  const [licenseKey, setLicenseKey] = useState("");
   const [cloudSync, setCloudSync] = useState(false);
+  const [config, setConfig] = useState<AppConfig | null>(null);
+
+  useEffect(() => {
+    fetchProviders().then(({ providers: p }) => setProviders(p));
+    fetchConfig().then(({ config: c }) => {
+      setConfig(c);
+      setAutoIngestion(c.autoIngestion);
+      setAutoRetrieval(c.autoRetrieval);
+      setSearchMode(c.searchMode);
+      setLicenseKey(c.licenseKey);
+      setCloudSync(c.cloudSync);
+    });
+  }, []);
 
   return (
     <div style={s.container}>
       {/* Provider config */}
       <div>
         <div style={s.sectionTitle}>LLM Providers (failover order)</div>
-        {DEMO_PROVIDERS.map((p, i) => (
+        {providers.map((p, i) => (
           <div key={p.name} style={s.providerRow}>
             <span style={{ fontFamily: "var(--font-label)", fontSize: 12, color: "var(--outline)", width: 16 }}>{i + 1}</span>
             <div style={s.dot(STATUS_DOT[p.status])} />
@@ -238,11 +230,11 @@ export function SettingsView() {
           </div>
           <div style={s.cardRow}>
             <span style={s.fieldLabel}>Devices</span>
-            <span style={s.cardValue}>1 linked</span>
+            <span style={s.cardValue}>{config?.devicesLinked ?? 1} linked</span>
           </div>
           <div style={s.cardRow}>
             <span style={s.fieldLabel}>Last Sync</span>
-            <span style={s.cardValue}>Never</span>
+            <span style={s.cardValue}>{config?.lastSync ?? "Never"}</span>
           </div>
           <div style={s.cardRow}>
             <span style={s.fieldLabel}>Encryption</span>
@@ -267,15 +259,15 @@ export function SettingsView() {
           </div>
           <div style={s.cardRow}>
             <span style={s.fieldLabel}>Status</span>
-            <span style={{ ...s.cardValue, color: "#22C55E" }}>ACTIVE</span>
+            <span style={{ ...s.cardValue, color: "#22C55E" }}>{config?.licenseStatus ?? "ACTIVE"}</span>
           </div>
           <div style={s.cardRow}>
             <span style={s.fieldLabel}>Expires</span>
-            <span style={s.cardValue}>30 days remaining</span>
+            <span style={s.cardValue}>{config?.licenseExpiry ?? "—"}</span>
           </div>
           <div style={s.cardRow}>
             <span style={s.fieldLabel}>Plan</span>
-            <span style={s.cardValue}>Pro</span>
+            <span style={s.cardValue}>{config?.licensePlan ?? "—"}</span>
           </div>
         </div>
       </div>
