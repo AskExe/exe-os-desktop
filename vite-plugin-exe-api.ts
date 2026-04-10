@@ -8,12 +8,42 @@
  *
  * When Tauri IPC is available, the frontend will use invoke() instead
  * and this plugin becomes unnecessary.
+ *
+ * NOTE: exe-os imports use resolved filesystem paths (not package specifiers)
+ * to avoid Vite's externalize-deps resolver failing on unexported subpaths.
  */
 
 import type { Plugin } from "vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { execSync } from "node:child_process";
+import { readFileSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const API_PREFIX = "/api/";
+const HOME = homedir();
+const EXE_OS_CONFIG_DIR = join(HOME, ".exe-os");
+
+/** Resolve exe-os dist path from the linked dependency (not global). */
+function resolveExeOs(): string {
+  try {
+    // exe-os is linked via file:../exe-os in package.json
+    const pkgPath = join(__dirname, "node_modules", "exe-os", "dist");
+    if (existsSync(pkgPath)) return pkgPath;
+  } catch { /* fall through */ }
+  try {
+    // Fallback: global install
+    const globalRoot = execSync("npm root -g", { encoding: "utf8", timeout: 3000 }).trim();
+    return join(globalRoot, "exe-os", "dist");
+  } catch { /* fall through */ }
+  return "";
+}
+
+let _exeOsPath: string | null = null;
+function getExeOsPath(): string {
+  if (_exeOsPath === null) _exeOsPath = resolveExeOs();
+  return _exeOsPath;
+}
 
 export default function exeApiPlugin(): Plugin {
   return {
@@ -49,14 +79,34 @@ export default function exeApiPlugin(): Plugin {
   };
 }
 
+// ── DB helper ──────────────────────────────────────────────────────
+
+let _dbInitialized = false;
+
+async function getDb(): Promise<{ execute: (sql: string | { sql: string; args: unknown[] }) => Promise<{ rows: Record<string, unknown>[] }> } | null> {
+  const dist = getExeOsPath();
+  if (!dist) return null;
+
+  try {
+    if (!_dbInitialized) {
+      const storeMod = await import(join(dist, "lib", "store.js"));
+      await storeMod.initStore();
+      _dbInitialized = true;
+    }
+    const dbMod = await import(join(dist, "lib", "database.js"));
+    return dbMod.getClient();
+  } catch {
+    return null;
+  }
+}
+
 // ── Data loaders ────────────────────────────────────────────────────
 
 async function getTasks(): Promise<unknown[]> {
+  const client = await getDb();
+  if (!client) return [];
+
   try {
-    const { initStore } = await import("exe-os/dist/lib/store.js");
-    await initStore();
-    const { getClient } = await import("exe-os/dist/lib/database.js");
-    const client = getClient();
     const result = await client.execute(
       `SELECT id, title, status, priority, assigned_to, assigned_by,
               project_name, context, result, created_at, updated_at
@@ -66,7 +116,7 @@ async function getTasks(): Promise<unknown[]> {
          updated_at DESC
        LIMIT 100`,
     );
-    return result.rows.map((r) => ({
+    return result.rows.map((r: Record<string, unknown>) => ({
       id: String(r.id),
       title: String(r.title),
       status: String(r.status),
@@ -86,63 +136,56 @@ async function getTasks(): Promise<unknown[]> {
 
 async function getEmployees(): Promise<unknown[]> {
   try {
-    const { readFileSync } = await import("node:fs");
-    const { homedir } = await import("node:os");
-    const rosterPath = `${homedir()}/.exe-os/exe-employees.json`;
+    const rosterPath = join(EXE_OS_CONFIG_DIR, "exe-employees.json");
+    if (!existsSync(rosterPath)) return [];
     const roster = JSON.parse(readFileSync(rosterPath, "utf8")) as Array<{
       name: string;
       role: string;
     }>;
 
     // Get memory counts and current tasks from DB
-    let memoryCounts = new Map<string, number>();
-    let currentTasks = new Map<string, string>();
-    let recentTasksByEmployee = new Map<string, string[]>();
+    const memoryCounts = new Map<string, number>();
+    const currentTasks = new Map<string, string>();
+    const recentTasksByEmployee = new Map<string, string[]>();
 
-    try {
-      const { initStore } = await import("exe-os/dist/lib/store.js");
-      await initStore();
-      const { getClient } = await import("exe-os/dist/lib/database.js");
-      const client = getClient();
-
-      // Memory counts per agent
-      const memResult = await client.execute(
-        "SELECT agent_id, COUNT(*) as cnt FROM memories GROUP BY agent_id",
-      );
-      for (const row of memResult.rows) {
-        memoryCounts.set(String(row.agent_id), Number(row.cnt));
-      }
-
-      // Current in_progress task per employee
-      for (const emp of roster) {
-        const taskResult = await client.execute({
-          sql: `SELECT title FROM tasks
-                WHERE assigned_to = ? AND status = 'in_progress'
-                ORDER BY updated_at DESC LIMIT 1`,
-          args: [emp.name],
-        });
-        if (taskResult.rows.length > 0) {
-          currentTasks.set(emp.name, String(taskResult.rows[0]!.title));
+    const client = await getDb();
+    if (client) {
+      try {
+        const memResult = await client.execute(
+          "SELECT agent_id, COUNT(*) as cnt FROM memories GROUP BY agent_id",
+        );
+        for (const row of memResult.rows) {
+          memoryCounts.set(String(row.agent_id), Number(row.cnt));
         }
 
-        // Recent tasks (last 5)
-        const recentResult = await client.execute({
-          sql: `SELECT title FROM tasks
-                WHERE assigned_to = ? AND status IN ('done', 'in_progress')
-                ORDER BY updated_at DESC LIMIT 5`,
-          args: [emp.name],
-        });
-        recentTasksByEmployee.set(
-          emp.name,
-          recentResult.rows.map((r) => String(r.title)),
-        );
-      }
-    } catch { /* DB not available */ }
+        for (const emp of roster) {
+          const taskResult = await client.execute({
+            sql: `SELECT title FROM tasks
+                  WHERE assigned_to = ? AND status = 'in_progress'
+                  ORDER BY updated_at DESC LIMIT 1`,
+            args: [emp.name],
+          });
+          if (taskResult.rows.length > 0) {
+            currentTasks.set(emp.name, String(taskResult.rows[0]!.title));
+          }
+
+          const recentResult = await client.execute({
+            sql: `SELECT title FROM tasks
+                  WHERE assigned_to = ? AND status IN ('done', 'in_progress')
+                  ORDER BY updated_at DESC LIMIT 5`,
+            args: [emp.name],
+          });
+          recentTasksByEmployee.set(
+            emp.name,
+            recentResult.rows.map((r: Record<string, unknown>) => String(r.title)),
+          );
+        }
+      } catch { /* DB queries failed */ }
+    }
 
     // Get tmux session status
-    let sessionStatus = new Map<string, string>();
+    const sessionStatus = new Map<string, string>();
     try {
-      const { execSync } = await import("node:child_process");
       const sessions = execSync("tmux list-sessions -F '#{session_name}' 2>/dev/null", {
         encoding: "utf8",
         timeout: 2000,
@@ -172,31 +215,22 @@ async function getEmployees(): Promise<unknown[]> {
 
 async function getConfig(): Promise<Record<string, unknown>> {
   try {
-    const { readFileSync, existsSync } = await import("node:fs");
-    const { homedir } = await import("node:os");
-
-    const configPath = `${homedir()}/.exe-os/config.json`;
+    const configPath = join(EXE_OS_CONFIG_DIR, "config.json");
     const config = existsSync(configPath)
       ? JSON.parse(readFileSync(configPath, "utf8"))
       : {};
 
-    // Check for license
-    const licensePath = `${homedir()}/.exe-os/license.json`;
+    const licensePath = join(EXE_OS_CONFIG_DIR, "license.json");
     const license = existsSync(licensePath)
       ? JSON.parse(readFileSync(licensePath, "utf8"))
       : null;
 
-    // Check cloud sync status
-    const cloudPath = `${homedir()}/.exe-os/cloud.json`;
+    const cloudPath = join(EXE_OS_CONFIG_DIR, "cloud.json");
     const cloud = existsSync(cloudPath)
       ? JSON.parse(readFileSync(cloudPath, "utf8"))
       : null;
 
-    return {
-      ...config,
-      license,
-      cloud,
-    };
+    return { ...config, license, cloud };
   } catch {
     return {};
   }
