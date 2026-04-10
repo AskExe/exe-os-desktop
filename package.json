@@ -11,7 +11,9 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@chenglou/pretext": "^0.0.5",
     "exe-os": "file:../exe-os",
+    "marked": "^18.0.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "vis-data": "^8.0.3",
