@@ -6,6 +6,7 @@ import { OfficeView } from "./views/Office";
 import { WorkView } from "./views/Work";
 import { TeamView } from "./views/Team";
 import { ExternalView } from "./views/External";
+import { GatewayView } from "./views/Gateway";
 import { WikiView } from "./views/Wiki";
 import { SettingsView } from "./views/Settings";
 
@@ -15,6 +16,7 @@ const views: Record<TabKey, React.FC> = {
   office: OfficeView,
   work: WorkView,
   team: TeamView,
+  gateway: GatewayView,
   external: ExternalView,
   wiki: WikiView,
   settings: SettingsView,
