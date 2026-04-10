@@ -1,13 +1,6 @@
 use std::process::Command;
 
-use serde::Deserialize;
 use tauri_plugin_updater::UpdaterExt;
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const NODE_TIMEOUT_MS: u64 = 10_000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,16 +40,6 @@ fn run_node_script(script: &str) -> Result<String, String> {
 // ---------------------------------------------------------------------------
 // Tauri IPC commands
 // ---------------------------------------------------------------------------
-
-#[derive(Deserialize)]
-struct TaskFilter {
-    #[serde(default)]
-    assigned_to: Option<String>,
-    #[serde(default)]
-    status: Option<String>,
-    #[serde(default)]
-    project: Option<String>,
-}
 
 #[tauri::command]
 async fn list_tasks(filter: Option<String>) -> Result<String, String> {
