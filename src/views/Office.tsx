@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
+import { fetchEmployees, type Employee } from "../services/exeOsData.js";
 
 // ---------------------------------------------------------------------------
 // Types (matching pixel-agents tauriBridge.ts contract)
@@ -26,15 +27,16 @@ const THEMES = [
 
 const DEFAULT_THEME = "midnight-hq";
 
-const DEMO_EMPLOYEES: OfficeEmployee[] = [
-  { name: "exe", role: "COO", status: "active" },
-  { name: "yoshi", role: "CTO", status: "working" },
-  { name: "tom", role: "Principal Engineer", status: "active" },
-  { name: "mari", role: "CMO", status: "idle" },
-  { name: "sasha", role: "Content Specialist", status: "offline" },
-];
-
 const STATUS_INTERVAL_MS = 5_000;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Map service-layer Employee to the postMessage contract shape. */
+function toOfficeEmployee(emp: Employee): OfficeEmployee {
+  return { name: emp.name, role: emp.role, status: emp.status };
+}
 
 // ---------------------------------------------------------------------------
 // postMessage helpers
@@ -130,6 +132,22 @@ export function OfficeView() {
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [employees, setEmployees] = useState<OfficeEmployee[]>([]);
+
+  /** Fetch employee roster from exe-os service layer. */
+  const refreshEmployees = useCallback(async () => {
+    try {
+      const { employees: raw } = await fetchEmployees();
+      setEmployees(raw.map(toOfficeEmployee));
+    } catch {
+      // Service unavailable — keep existing state
+    }
+  }, []);
+
+  /** Initial employee load. */
+  useEffect(() => {
+    refreshEmployees();
+  }, [refreshEmployees]);
 
   /** Called once the iframe has loaded — push initial state. */
   const handleLoad = useCallback(() => {
@@ -137,9 +155,9 @@ export function OfficeView() {
     setError(false);
     const frame = iframeRef.current;
     sendTheme(frame, themeId);
-    sendEmployees(frame, DEMO_EMPLOYEES);
-    sendStatuses(frame, DEMO_EMPLOYEES);
-  }, [themeId]);
+    sendEmployees(frame, employees);
+    sendStatuses(frame, employees);
+  }, [themeId, employees]);
 
   /** Handle iframe load error. */
   const handleError = useCallback(() => {
@@ -157,14 +175,20 @@ export function OfficeView() {
     [],
   );
 
-  /** Periodically push status updates to the virtual office. */
+  /** Push updated employees to iframe whenever they change. */
   useEffect(() => {
     if (!loaded) return;
-    const timer = setInterval(() => {
-      sendStatuses(iframeRef.current, DEMO_EMPLOYEES);
-    }, STATUS_INTERVAL_MS);
+    const frame = iframeRef.current;
+    sendEmployees(frame, employees);
+    sendStatuses(frame, employees);
+  }, [loaded, employees]);
+
+  /** Periodically refresh employee statuses from exe-os. */
+  useEffect(() => {
+    if (!loaded) return;
+    const timer = setInterval(refreshEmployees, STATUS_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [loaded]);
+  }, [loaded, refreshEmployees]);
 
   return (
     <div style={s.container}>
