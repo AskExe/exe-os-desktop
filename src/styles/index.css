@@ -1,0 +1,74 @@
+/* Exe Foundry Bold — global styles */
+
+:root {
+  --bg: #13121e;
+  --surface: #13121e;
+  --surface-low: #1b1a27;
+  --surface-container: #1f1e2b;
+  --surface-high: #2a2836;
+  --surface-highest: #353341;
+  --surface-lowest: #0e0d19;
+
+  --primary: #fff4dc;
+  --primary-container: #f5d76e;
+  --primary-dim: #e2c55e;
+  --on-primary-container: #715c00;
+
+  --secondary: #dec1ac;
+  --secondary-container: #574333;
+
+  --tertiary-dim: #ffb4a8;
+  --on-tertiary-container: #b42619;
+
+  --on-surface: #e4e0f2;
+  --on-surface-variant: #cfc6b1;
+  --outline: #98907d;
+  --outline-variant: #4c4637;
+
+  --font-headline: 'Epilogue', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-label: 'Space Grotesk', sans-serif;
+
+  --sidebar-w: 200px;
+  --topbar-h: 64px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+}
+
+/* No border-radius anywhere */
+*, *::before, *::after {
+  border-radius: 0 !important;
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Selection */
+::selection {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* Scrollbar — minimal */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-low);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+}
