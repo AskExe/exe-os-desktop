@@ -175,7 +175,7 @@ const s = {
   },
   graphArea: {
     flex: 1,
-    background: "#0e0d19",
+    background: "var(--surface-lowest)",
     position: "relative" as const,
   },
   detailPanel: {

@@ -191,20 +191,20 @@ const PLATFORM_LABEL: Record<Platform, string> = {
 };
 
 const PLATFORM_COLOR: Record<Platform, string> = {
-  whatsapp: "#4ADE80",
-  email: "#60A5FA",
-  webhook: "#A78BFA",
+  whatsapp: "#22C55E",
+  email: "#dec1ac",
+  webhook: "#ffb4a8",
 };
 
 const AGENT_STATUS_COLOR: Record<GatewayAgent["status"], string> = {
-  online: "#4ADE80",
-  busy: "#FBBF24",
+  online: "#22C55E",
+  busy: "#F5D76E",
   offline: "#98907d",
 };
 
 const MODEL_TIER_COLOR: Record<string, string> = {
   haiku: "#98907d",
-  sonnet: "#60A5FA",
+  sonnet: "#dec1ac",
   opus: "#F5D76E",
 };
 
@@ -393,7 +393,7 @@ const s = {
     maxWidth: "70%",
     alignSelf: outgoing ? "flex-end" as const : "flex-start" as const,
     padding: "10px 14px",
-    background: outgoing ? "#2a2520" : "var(--surface-container)",
+    background: outgoing ? "var(--surface-high)" : "var(--surface-container)",
     borderLeft: outgoing ? "3px solid var(--primary-dim)" : "3px solid var(--outline-variant)",
   }),
   messageContent: {

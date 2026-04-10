@@ -33,7 +33,7 @@ export function Sidebar({
         top: 0,
         height: "100%",
         width: 200,
-        background: "#0e0d19",
+        background: "var(--surface-lowest)",
         display: "flex",
         flexDirection: "column",
         fontFamily: "var(--font-headline)",
@@ -48,7 +48,7 @@ export function Sidebar({
           style={{
             fontSize: 24,
             fontWeight: 900,
-            color: "#F5D76E",
+            color: "var(--primary-container)",
             letterSpacing: "-0.02em",
           }}
         >
@@ -57,7 +57,7 @@ export function Sidebar({
         <div
           style={{
             fontSize: 10,
-            color: "#98907d",
+            color: "var(--outline)",
             letterSpacing: "0.1em",
             opacity: 0.7,
           }}
@@ -80,9 +80,9 @@ export function Sidebar({
                 gap: 12,
                 padding: "12px 20px",
                 cursor: "pointer",
-                color: isActive ? "#F5D76E" : "#98907d",
-                background: isActive ? "#2a2836" : "transparent",
-                borderLeft: isActive ? "4px solid #F5D76E" : "4px solid transparent",
+                color: isActive ? "var(--primary-container)" : "var(--outline)",
+                background: isActive ? "var(--surface-high)" : "transparent",
+                borderLeft: isActive ? "4px solid var(--primary-container)" : "4px solid transparent",
                 fontWeight: isActive ? 700 : 400,
                 fontSize: 12,
                 transition: "all 0.2s",
@@ -90,13 +90,13 @@ export function Sidebar({
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.color = "#F5D76E";
-                  e.currentTarget.style.background = "#2a2836";
+                  e.currentTarget.style.color = "var(--primary-container)";
+                  e.currentTarget.style.background = "var(--surface-high)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.color = "#98907d";
+                  e.currentTarget.style.color = "var(--outline)";
                   e.currentTarget.style.background = "transparent";
                 }
               }}
@@ -116,7 +116,7 @@ export function Sidebar({
           style={{
             width: 40,
             height: 40,
-            background: "#2a2836",
+            background: "var(--surface-high)",
             border: "2px solid rgba(152, 144, 125, 0.2)",
             display: "flex",
             alignItems: "center",
@@ -124,7 +124,7 @@ export function Sidebar({
             overflow: "hidden",
           }}
         >
-          <span className="material-symbols-outlined" style={{ color: "#98907d" }}>
+          <span className="material-symbols-outlined" style={{ color: "var(--outline)" }}>
             person
           </span>
         </div>

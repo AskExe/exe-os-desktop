@@ -5,6 +5,7 @@ const TAB_TITLES: Record<TabKey, string> = {
   office: "Virtual Office",
   work: "Work Dashboard",
   team: "Team Roster",
+  gateway: "Gateway",
   external: "External Agents",
   wiki: "Company Wiki",
   settings: "Settings",
@@ -23,7 +24,7 @@ export function TopBar({ activeTab }: { activeTab: TabKey }) {
         justifyContent: "space-between",
         alignItems: "center",
         padding: "0 32px",
-        background: "#1b1a27",
+        background: "var(--surface-low)",
         fontFamily: "var(--font-headline)",
         fontWeight: 700,
         textTransform: "uppercase",
@@ -33,24 +34,24 @@ export function TopBar({ activeTab }: { activeTab: TabKey }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: "#e4e0f2" }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: "var(--on-surface)" }}>
           {TAB_TITLES[activeTab]}
         </span>
-        <div style={{ height: 16, width: 1, background: "rgba(152, 144, 125, 0.2)" }} />
+        <div style={{ height: 16, width: 1, background: "var(--outline-variant)" }} />
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 8,
             fontSize: 10,
-            color: "#e2c55e",
+            color: "var(--primary-dim)",
           }}
         >
           <div
             style={{
               width: 8,
               height: 8,
-              background: "#ffb4a8",
+              background: "var(--tertiary-dim)",
               boxShadow: "0 0 8px rgba(255,180,168,0.6)",
             }}
           />
@@ -63,18 +64,18 @@ export function TopBar({ activeTab }: { activeTab: TabKey }) {
           type="text"
           placeholder="SEARCH..."
           style={{
-            background: "#0e0d19",
+            background: "var(--surface-lowest)",
             border: "none",
             fontSize: 10,
             padding: "8px 16px",
             width: 192,
-            color: "#e4e0f2",
+            color: "var(--on-surface)",
             fontFamily: "var(--font-label)",
             textTransform: "uppercase",
             outline: "none",
           }}
           onFocus={(e) => {
-            e.currentTarget.style.boxShadow = "0 0 0 1px #f5d76e";
+            e.currentTarget.style.boxShadow = "0 0 0 1px var(--primary-container)";
           }}
           onBlur={(e) => {
             e.currentTarget.style.boxShadow = "none";
@@ -84,7 +85,7 @@ export function TopBar({ activeTab }: { activeTab: TabKey }) {
           style={{
             background: "none",
             border: "none",
-            color: "#98907d",
+            color: "var(--outline)",
             cursor: "pointer",
           }}
         >

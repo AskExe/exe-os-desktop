@@ -34,9 +34,9 @@ interface ChatViewProps {
 // Constants — Exe Foundry Bold
 // ---------------------------------------------------------------------------
 
-const SURFACE_LOWEST = "#0F0E1A";
-const USER_BUBBLE_BG = "#1E1D2E";
-const ASSISTANT_BUBBLE_BG = "#16152A";
+const SURFACE_LOWEST = "#0e0d19";
+const USER_BUBBLE_BG = "#1f1e2b";
+const ASSISTANT_BUBBLE_BG = "#13121e";
 const GOLD = "#F5D76E";
 const ON_SURFACE = "#e4e0f2";
 const ON_SURFACE_VARIANT = "#cfc6b1";
@@ -752,12 +752,12 @@ export function ChatView({ employeeName, onClose }: ChatViewProps) {
         .frag--heading-1 {
           font: 700 18px Epilogue, sans-serif;
           letter-spacing: -0.02em;
-          color: #fff;
+          color: #fff4dc;
         }
         .frag--heading-2 {
           font: 700 16px Epilogue, sans-serif;
           letter-spacing: -0.02em;
-          color: #fff;
+          color: #fff4dc;
         }
         .frag--code {
           padding: 2px 6px 3px;
@@ -784,7 +784,7 @@ export function ChatView({ employeeName, onClose }: ChatViewProps) {
           text-underline-offset: 0.14em;
         }
         .is-em { font-style: italic; }
-        .is-strong { font-weight: 700; color: #fff; }
+        .is-strong { font-weight: 700; color: #fff4dc; }
         .is-del {
           text-decoration: line-through;
           text-decoration-thickness: 1px;
@@ -837,7 +837,7 @@ export function ChatView({ employeeName, onClose }: ChatViewProps) {
         }
         .chat-send-btn {
           background: ${GOLD};
-          color: #0F0E1A;
+          color: #715c00;
           border: none;
           padding: 10px 20px;
           font-size: 12px;
