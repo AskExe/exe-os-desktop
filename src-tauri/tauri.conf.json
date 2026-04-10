@@ -34,6 +34,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": "v1Compatible"
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://askexe.com/api/updates/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQzN0IwQzBGOEZERjA1N0EKUldSNkJkK1BEd3g3UXpsd3JNQkt5b0VRQU9ZWUMxTXBlRFlXcnNYWGNmTXd0NEhXbk1Mc0JudmwK"
+    }
   }
 }
