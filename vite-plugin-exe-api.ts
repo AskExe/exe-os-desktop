@@ -5,6 +5,7 @@
  *   GET /api/tasks     — all tasks from exe-os DB
  *   GET /api/employees — employee roster + memory counts + current tasks
  *   GET /api/config    — exe-os config from ~/.exe-os/config.json
+ *   GET /api/license   — license validation via exe-os checkLicense()
  *
  * When Tauri IPC is available, the frontend will use invoke() instead
  * and this plugin becomes unnecessary.
@@ -65,6 +66,9 @@ export default function exeApiPlugin(): Plugin {
               break;
             case "config":
               res.end(JSON.stringify(await getConfig()));
+              break;
+            case "license":
+              res.end(JSON.stringify(await getLicense()));
               break;
             default:
               res.statusCode = 404;
@@ -210,6 +214,27 @@ async function getEmployees(): Promise<unknown[]> {
     }));
   } catch {
     return [];
+  }
+}
+
+async function getLicense(): Promise<Record<string, unknown>> {
+  const dist = getExeOsPath();
+  if (!dist) {
+    return { valid: true, plan: "free", email: "", expiresAt: null };
+  }
+
+  try {
+    const licenseMod = await import(join(dist, "lib", "license.js"));
+    const result = await licenseMod.checkLicense();
+    return {
+      valid: result.valid,
+      plan: result.plan,
+      email: result.email,
+      expiresAt: result.expiresAt,
+    };
+  } catch {
+    // Network or module error — allow through (user-first)
+    return { valid: true, plan: "free", email: "", expiresAt: null };
   }
 }
 

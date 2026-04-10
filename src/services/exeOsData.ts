@@ -158,6 +158,48 @@ export async function fetchProviders(): Promise<ProvidersResult> {
 }
 
 // ---------------------------------------------------------------------------
+// License
+// ---------------------------------------------------------------------------
+
+export type Plan = "free" | "pro" | "team" | "enterprise";
+
+export interface LicenseInfo {
+  valid: boolean;
+  plan: Plan;
+  email: string;
+  expiresAt: string | null;
+}
+
+const FALLBACK_LICENSE: LicenseInfo = {
+  valid: true,
+  plan: "free",
+  email: "",
+  expiresAt: null,
+};
+
+export interface LicenseResult {
+  license: LicenseInfo;
+  isDemo: boolean;
+}
+
+export async function fetchLicense(): Promise<LicenseResult> {
+  // 1. Try Tauri IPC (production Tauri build)
+  try {
+    const license = await tauriInvoke<LicenseInfo>("check_license");
+    return { license, isDemo: false };
+  } catch { /* Tauri not available */ }
+
+  // 2. Try Vite API middleware (dev mode with exe-os installed)
+  try {
+    const license = await apiFetch<LicenseInfo>("license");
+    return { license, isDemo: false };
+  } catch { /* API not available */ }
+
+  // 3. Fallback — allow through (user-first)
+  return { license: FALLBACK_LICENSE, isDemo: true };
+}
+
+// ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
