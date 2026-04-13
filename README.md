@@ -67,3 +67,15 @@ npm run tauri build
 ## Status
 
 Early development. Screen designs complete, integration pending.
+
+## AGPL network boundary — Exe CRM
+
+The CRM tab loads `https://crm.askexe.com` in a native `WebviewWindow`
+(see `src-tauri/src/lib.rs :: open_crm_window`). The exe-crm codebase is
+AGPLv3 and is **never** imported, bundled, or vendored into this repo —
+the only contract is the URL string. The webview runs in an isolated
+cookie jar so CRM sessions don't leak into the main app. White-label
+distributors override the URL via the `EXE_CRM_URL` environment variable
+— no rebuild required. Do **not** replace this with an iframe or
+`<webview>` element: both would pull third-party origin code into the
+Tauri process and break the boundary.

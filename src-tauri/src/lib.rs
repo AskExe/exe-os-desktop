@@ -182,12 +182,23 @@ async fn open_crm_window(app: tauri::AppHandle) -> Result<(), String> {
         return existing.set_focus().map_err(|e| e.to_string());
     }
 
+    const CRM_WINDOW_WIDTH: f64 = 1280.0;
+    const CRM_WINDOW_HEIGHT: f64 = 800.0;
+    const CRM_WINDOW_MIN_WIDTH: f64 = 900.0;
+    const CRM_WINDOW_MIN_HEIGHT: f64 = 600.0;
+
     tauri::WebviewWindowBuilder::new(
         &app,
         CRM_WINDOW_LABEL,
         tauri::WebviewUrl::External(url),
     )
         .title(CRM_WINDOW_TITLE)
+        .inner_size(CRM_WINDOW_WIDTH, CRM_WINDOW_HEIGHT)
+        .min_inner_size(CRM_WINDOW_MIN_WIDTH, CRM_WINDOW_MIN_HEIGHT)
+        .decorations(true)
+        // devtools() gated to debug builds only — prod never exposes the
+        // CRM webview's DevTools surface (AGPL hardening + privacy hygiene).
+        .devtools(cfg!(debug_assertions))
         .build()
         .map(|_| ())
         .map_err(|e| e.to_string())
