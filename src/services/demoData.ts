@@ -126,17 +126,28 @@ export const DEMO_REVIEW_TASKS: Task[] = [
 // Providers (Settings)
 // ---------------------------------------------------------------------------
 
+/**
+ * Provider — single source of truth shared by demo data and the Tauri
+ * `list_providers` IPC command output. Shape must match
+ * `exe-os/src/bin/list-providers.ts:Provider` byte-for-byte so that the
+ * Settings tab renders identically in real and demo modes (demo parity
+ * invariant).
+ */
 export interface Provider {
+  id: "anthropic" | "opencode" | "gemini" | "openai" | "chutes";
   name: string;
   status: "active" | "configured" | "not_set";
   apiKey: string;
   model: string;
   models: string[];
+  priority: number;
+  source: "env" | "config" | "none";
 }
 
 export const DEMO_PROVIDERS: Provider[] = [
-  { name: "Anthropic", status: "active", apiKey: "sk-ant-•••••••••••••8f2", model: "claude-sonnet-4-20250514", models: ["claude-opus-4-6-20250610", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"] },
-  { name: "OpenCode", status: "configured", apiKey: "oc-•••••••••••••4a1", model: "claude-sonnet-4-20250514", models: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"] },
-  { name: "Gemini", status: "not_set", apiKey: "", model: "", models: ["gemini-2.0-flash", "gemini-2.5-pro"] },
-  { name: "OpenAI", status: "not_set", apiKey: "", model: "", models: ["gpt-4o", "gpt-4o-mini"] },
+  { id: "anthropic", name: "Anthropic", status: "active", apiKey: "sk-a****8f20", model: "claude-sonnet-4-20250514", models: ["claude-opus-4-6-20250610", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"], priority: 1, source: "env" },
+  { id: "opencode", name: "OpenCode", status: "configured", apiKey: "oc-a****4a10", model: "claude-sonnet-4-20250514", models: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"], priority: 2, source: "env" },
+  { id: "gemini", name: "Gemini", status: "not_set", apiKey: "", model: "", models: ["gemini-2.0-flash", "gemini-2.5-pro"], priority: 3, source: "none" },
+  { id: "openai", name: "OpenAI", status: "not_set", apiKey: "", model: "", models: ["gpt-4o", "gpt-4o-mini"], priority: 4, source: "none" },
+  { id: "chutes", name: "Chutes", status: "not_set", apiKey: "", model: "", models: [], priority: 5, source: "none" },
 ];

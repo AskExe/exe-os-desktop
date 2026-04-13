@@ -174,8 +174,15 @@ export interface ProvidersResult {
 }
 
 export async function fetchProviders(): Promise<ProvidersResult> {
-  // Providers require env var access — no Tauri command or Vite API route yet
-  // Fall through to demo data
+  // 1. Try Tauri IPC — list_providers shells out to the exe-os CLI, masks
+  //    keys at the Node boundary, and returns the ranked catalog.
+  try {
+    const providers = await tauriApi.listProviders();
+    return { providers, isDemo: false };
+  } catch { /* Tauri not available — fall through to demo */ }
+
+  // 2. No Vite tier — provider env vars are never surfaced to the browser.
+  // 3. Demo fallback preserves identical UI behavior (demo parity invariant).
   return { providers: DEMO_PROVIDERS, isDemo: true };
 }
 

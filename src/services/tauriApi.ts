@@ -53,6 +53,17 @@ export interface SpawnResult {
   session: string;
 }
 
+export interface ProviderRow {
+  id: "anthropic" | "opencode" | "gemini" | "openai" | "chutes";
+  name: string;
+  status: "active" | "configured" | "not_set";
+  apiKey: string;
+  model: string;
+  models: string[];
+  priority: number;
+  source: "env" | "config" | "none";
+}
+
 export interface TaskFilter {
   assignedTo?: string;
   status?: string;
@@ -88,6 +99,11 @@ export async function getConfig(): Promise<Record<string, unknown>> {
 export async function checkLicense(): Promise<LicenseResult> {
   const json = await invoke<string>("check_license");
   return JSON.parse(json);
+}
+
+export async function listProviders(): Promise<ProviderRow[]> {
+  const json = await invoke<string>("list_providers");
+  return JSON.parse(json) as ProviderRow[];
 }
 
 export async function spawnSession(

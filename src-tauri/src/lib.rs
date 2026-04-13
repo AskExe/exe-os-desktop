@@ -140,6 +140,23 @@ async fn check_license() -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn list_providers() -> Result<String, String> {
+    let dist = resolve_exe_os_dist()?;
+
+    let script = format!(
+        r#"
+        import("{dist}/bin/list-providers.js").then(m => {{
+            const providers = m.buildProviderList(process.env, m.readConfigProviders());
+            console.log(JSON.stringify(providers));
+        }}).catch(e => {{ console.error(e); process.exit(1); }});
+        "#,
+        dist = dist,
+    );
+
+    run_node_script(&script)
+}
+
+#[tauri::command]
 async fn spawn_session(employee_name: String, exe_session: String, working_dir: String) -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
 
@@ -170,6 +187,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_tasks,
             list_employees,
+            list_providers,
             recall_memory,
             get_config,
             check_license,
