@@ -1,5 +1,6 @@
 use std::process::Command;
 
+use tauri::Manager;
 use tauri_plugin_updater::UpdaterExt;
 
 // ---------------------------------------------------------------------------
@@ -156,6 +157,42 @@ async fn list_providers() -> Result<String, String> {
     run_node_script(&script)
 }
 
+/// Open the exe-crm web app in a native OS webview window.
+///
+/// AGPL boundary: exe-crm is a separate AGPL codebase loaded by URL only.
+/// Do NOT replace WebviewUrl::External with an iframe, Vite dev proxy, or
+/// in-bundle import — each of those would pull third-party origin code
+/// into the Tauri process and break the white-label distribution story.
+/// The URL is env-overridable (`EXE_CRM_URL`) so distributors can point
+/// at their own white-labeled instance without rebuilding.
+#[tauri::command]
+async fn open_crm_window(app: tauri::AppHandle) -> Result<(), String> {
+    const DEFAULT_CRM_URL: &str = "https://crm.askexe.com";
+    const CRM_WINDOW_LABEL: &str = "crm";
+    const CRM_WINDOW_TITLE: &str = "Exe CRM";
+
+    let url_str = std::env::var("EXE_CRM_URL").unwrap_or_else(|_| DEFAULT_CRM_URL.to_string());
+    let url = url_str
+        .parse::<tauri::Url>()
+        .map_err(|e| format!("Invalid EXE_CRM_URL '{}': {}", url_str, e))?;
+
+    // Focus the existing window if the user already opened the CRM; this
+    // keeps the session + cookie jar stable across repeated clicks.
+    if let Some(existing) = app.get_webview_window(CRM_WINDOW_LABEL) {
+        return existing.set_focus().map_err(|e| e.to_string());
+    }
+
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        CRM_WINDOW_LABEL,
+        tauri::WebviewUrl::External(url),
+    )
+        .title(CRM_WINDOW_TITLE)
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 async fn spawn_session(employee_name: String, exe_session: String, working_dir: String) -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
@@ -191,6 +228,7 @@ pub fn run() {
             recall_memory,
             get_config,
             check_license,
+            open_crm_window,
             spawn_session,
         ])
         .setup(|app| {

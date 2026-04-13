@@ -106,6 +106,18 @@ export async function listProviders(): Promise<ProviderRow[]> {
   return JSON.parse(json) as ProviderRow[];
 }
 
+/**
+ * Launch the exe-crm web app in a native OS WebviewWindow.
+ *
+ * AGPL boundary: exe-crm is a separate AGPL codebase loaded by URL only.
+ * Do NOT replace this call with an iframe, <webview>, or in-React fetch —
+ * each would pull third-party origin code into the Tauri process and break
+ * the white-label boundary (see src-tauri/src/lib.rs :: open_crm_window).
+ */
+export async function openCrmWindow(): Promise<void> {
+  await invoke<void>("open_crm_window");
+}
+
 export async function spawnSession(
   employeeName: string,
   exeSession: string,
