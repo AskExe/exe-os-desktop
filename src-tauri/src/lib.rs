@@ -141,6 +141,39 @@ async fn check_license() -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn query_graph() -> Result<String, String> {
+    let dist = resolve_exe_os_dist()?;
+
+    let script = format!(
+        r#"
+        import("{dist}/lib/store.js").then(s => s.initStore()).then(async () => {{
+            const db = await import("{dist}/lib/database.js");
+            const client = db.getClient();
+            const entResult = await client.execute(
+                "SELECT id, name, type, first_seen, last_seen FROM entities ORDER BY last_seen DESC LIMIT 200"
+            );
+            const relResult = await client.execute(
+                `SELECT r.source_entity_id, r.target_entity_id, r.type, r.weight,
+                        COALESCE(r.confidence, 1.0) as confidence,
+                        s.name as source_name, t.name as target_name
+                 FROM relationships r
+                 JOIN entities s ON r.source_entity_id = s.id
+                 JOIN entities t ON r.target_entity_id = t.id
+                 ORDER BY r.weight DESC LIMIT 500`
+            );
+            console.log(JSON.stringify({{
+                entities: entResult.rows,
+                relationships: relResult.rows,
+            }}));
+        }}).catch(e => {{ console.error(e); process.exit(1); }});
+        "#,
+        dist = dist,
+    );
+
+    run_node_script(&script)
+}
+
+#[tauri::command]
 async fn list_providers() -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
 
@@ -237,6 +270,7 @@ pub fn run() {
             list_employees,
             list_providers,
             recall_memory,
+            query_graph,
             get_config,
             check_license,
             open_crm_window,

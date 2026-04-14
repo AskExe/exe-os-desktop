@@ -15,9 +15,17 @@ import {
   DEMO_TASKS,
   DEMO_REVIEW_TASKS,
   DEMO_PROVIDERS,
+  DEMO_WIKI_NODES,
+  DEMO_WIKI_EDGES,
+  DEMO_WIKI_MEMORIES,
+  DEMO_WIKI_WORKTREE,
   type Employee,
   type Task,
   type Provider,
+  type WikiNode,
+  type WikiEdge,
+  type WikiMemory,
+  type WikiWorkTreeProject,
 } from "./demoData.js";
 import * as tauriApi from "./tauriApi.js";
 
@@ -312,4 +320,219 @@ export async function fetchConfig(): Promise<ConfigResult> {
 
   // 3. Fallback to demo defaults
   return { config: DEFAULT_CONFIG, isDemo: true };
+}
+
+// ---------------------------------------------------------------------------
+// Wiki — Knowledge Graph
+// ---------------------------------------------------------------------------
+
+export type { WikiNode, WikiEdge, WikiMemory, WikiWorkTreeProject };
+
+/** Map a raw entity type string to the WikiNode type union. */
+function toNodeType(type: string): WikiNode["type"] {
+  const valid = new Set(["person", "project", "concept", "tool", "decision"]);
+  return valid.has(type) ? type as WikiNode["type"] : "concept";
+}
+
+export interface WikiGraphResult {
+  nodes: WikiNode[];
+  edges: WikiEdge[];
+  worktree: WikiWorkTreeProject[];
+  isDemo: boolean;
+}
+
+export async function fetchWikiGraph(): Promise<WikiGraphResult> {
+  // 1. Try Tauri IPC
+  try {
+    const raw = await tauriApi.queryGraph();
+    if (raw.entities.length > 0) {
+      // Count relationships per entity to compute degree
+      const degreeCounts = new Map<string, number>();
+      for (const r of raw.relationships) {
+        degreeCounts.set(r.source_entity_id, (degreeCounts.get(r.source_entity_id) ?? 0) + 1);
+        degreeCounts.set(r.target_entity_id, (degreeCounts.get(r.target_entity_id) ?? 0) + 1);
+      }
+
+      const nodes: WikiNode[] = raw.entities.map((e) => ({
+        id: e.id,
+        label: e.name,
+        type: toNodeType(e.type),
+        degree: degreeCounts.get(e.id) ?? 0,
+      }));
+
+      const edges: WikiEdge[] = raw.relationships.map((r) => ({
+        from: r.source_entity_id,
+        to: r.target_entity_id,
+        label: r.type,
+        weight: r.weight,
+        confidence: r.confidence,
+      }));
+
+      // Build worktree from person→project relationships
+      const worktree = buildWorktree(raw.entities, raw.relationships);
+
+      return { nodes, edges, worktree, isDemo: false };
+    }
+  } catch { /* Tauri not available */ }
+
+  // 2. Try Vite API middleware
+  try {
+    const raw = await apiFetch<{
+      entities: Array<{ id: string; name: string; type: string; first_seen: string; last_seen: string }>;
+      relationships: Array<{
+        source_entity_id: string; target_entity_id: string;
+        source_name: string; target_name: string;
+        type: string; weight: number; confidence: number;
+      }>;
+    }>("wiki-graph");
+    if (raw.entities.length > 0) {
+      const degreeCounts = new Map<string, number>();
+      for (const r of raw.relationships) {
+        degreeCounts.set(r.source_entity_id, (degreeCounts.get(r.source_entity_id) ?? 0) + 1);
+        degreeCounts.set(r.target_entity_id, (degreeCounts.get(r.target_entity_id) ?? 0) + 1);
+      }
+
+      const nodes: WikiNode[] = raw.entities.map((e) => ({
+        id: e.id,
+        label: e.name,
+        type: toNodeType(e.type),
+        degree: degreeCounts.get(e.id) ?? 0,
+      }));
+
+      const edges: WikiEdge[] = raw.relationships.map((r) => ({
+        from: r.source_entity_id,
+        to: r.target_entity_id,
+        label: r.type,
+        weight: r.weight,
+        confidence: r.confidence,
+      }));
+
+      const worktree = buildWorktreeFromApi(raw.entities, raw.relationships);
+      return { nodes, edges, worktree, isDemo: false };
+    }
+  } catch { /* API not available */ }
+
+  // 3. Fallback to demo data
+  return {
+    nodes: DEMO_WIKI_NODES,
+    edges: DEMO_WIKI_EDGES,
+    worktree: DEMO_WIKI_WORKTREE,
+    isDemo: true,
+  };
+}
+
+/** Build worktree from Tauri IPC entity/relationship data. */
+function buildWorktree(
+  entities: tauriApi.GraphEntity[],
+  relationships: tauriApi.GraphRelationship[],
+): WikiWorkTreeProject[] {
+  const projects = entities.filter((e) => e.type === "project");
+  const persons = new Set(entities.filter((e) => e.type === "person").map((e) => e.id));
+  const concepts = new Map(entities.map((e) => [e.id, e.name]));
+
+  return projects.map((proj) => {
+    // Find persons connected to this project
+    const agentIds = new Set<string>();
+    for (const r of relationships) {
+      if (r.target_entity_id === proj.id && persons.has(r.source_entity_id)) agentIds.add(r.source_entity_id);
+      if (r.source_entity_id === proj.id && persons.has(r.target_entity_id)) agentIds.add(r.target_entity_id);
+    }
+
+    const agents = [...agentIds].map((agentId) => {
+      const agent = entities.find((e) => e.id === agentId)!;
+      // Find topics this agent is connected to (non-person, non-project)
+      const topics: string[] = [];
+      for (const r of relationships) {
+        const otherId = r.source_entity_id === agentId ? r.target_entity_id : r.source_entity_id;
+        if ((r.source_entity_id === agentId || r.target_entity_id === agentId) &&
+            !persons.has(otherId) && otherId !== proj.id) {
+          const name = concepts.get(otherId);
+          if (name && !topics.includes(name)) topics.push(name);
+        }
+      }
+      return { name: agent.name, topics: topics.slice(0, 5) };
+    });
+
+    return { project: proj.name, agents };
+  }).filter((p) => p.agents.length > 0);
+}
+
+/** Build worktree from Vite API response (same shape, different source types). */
+function buildWorktreeFromApi(
+  entities: Array<{ id: string; name: string; type: string }>,
+  relationships: Array<{ source_entity_id: string; target_entity_id: string; source_name: string; target_name: string; type: string }>,
+): WikiWorkTreeProject[] {
+  const projects = entities.filter((e) => e.type === "project");
+  const persons = new Set(entities.filter((e) => e.type === "person").map((e) => e.id));
+  const concepts = new Map(entities.map((e) => [e.id, e.name]));
+
+  return projects.map((proj) => {
+    const agentIds = new Set<string>();
+    for (const r of relationships) {
+      if (r.target_entity_id === proj.id && persons.has(r.source_entity_id)) agentIds.add(r.source_entity_id);
+      if (r.source_entity_id === proj.id && persons.has(r.target_entity_id)) agentIds.add(r.target_entity_id);
+    }
+
+    const agents = [...agentIds].map((agentId) => {
+      const agent = entities.find((e) => e.id === agentId)!;
+      const topics: string[] = [];
+      for (const r of relationships) {
+        const otherId = r.source_entity_id === agentId ? r.target_entity_id : r.source_entity_id;
+        if ((r.source_entity_id === agentId || r.target_entity_id === agentId) &&
+            !persons.has(otherId) && otherId !== proj.id) {
+          const name = concepts.get(otherId);
+          if (name && !topics.includes(name)) topics.push(name);
+        }
+      }
+      return { name: agent.name, topics: topics.slice(0, 5) };
+    });
+
+    return { project: proj.name, agents };
+  }).filter((p) => p.agents.length > 0);
+}
+
+// ---------------------------------------------------------------------------
+// Wiki — Memory Search
+// ---------------------------------------------------------------------------
+
+export interface WikiMemoriesResult {
+  memories: WikiMemory[];
+  isDemo: boolean;
+}
+
+export async function fetchWikiMemories(query: string): Promise<WikiMemoriesResult> {
+  if (!query.trim()) return { memories: [], isDemo: false };
+
+  // 1. Try Tauri IPC (existing recall_memory command)
+  try {
+    const raw = await tauriApi.recallMemory(query, 20);
+    if (raw.length > 0) {
+      const memories: WikiMemory[] = raw.map((r) => ({
+        text: r.text,
+        agent: "",
+        project: "",
+        timestamp: "",
+        confidence: r.score,
+      }));
+      return { memories, isDemo: false };
+    }
+  } catch { /* Tauri not available */ }
+
+  // 2. Try Vite API middleware
+  try {
+    const raw = await apiFetch<Array<{
+      text: string; agent: string; project: string;
+      timestamp: string; confidence: number;
+    }>>(`wiki-memories?q=${encodeURIComponent(query)}`);
+    if (raw.length > 0) {
+      return { memories: raw, isDemo: false };
+    }
+  } catch { /* API not available */ }
+
+  // 3. Fallback to demo data — match against keys
+  const q = query.toLowerCase();
+  for (const [key, memories] of Object.entries(DEMO_WIKI_MEMORIES)) {
+    if (q.includes(key)) return { memories, isDemo: true };
+  }
+  return { memories: [], isDemo: true };
 }

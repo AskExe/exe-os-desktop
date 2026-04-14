@@ -1,148 +1,25 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Network } from "vis-network";
 import { DataSet } from "vis-data";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface GraphNode {
-  id: string;
-  label: string;
-  type: "person" | "project" | "concept" | "tool" | "decision";
-  degree: number;
-  community?: number;
-}
-
-interface GraphEdge {
-  from: string;
-  to: string;
-  label: string;
-  weight: number;
-  confidence: number;
-}
-
-interface MemorySnippet {
-  text: string;
-  agent: string;
-  project: string;
-  timestamp: string;
-  confidence: number;
-}
-
-interface WorkTreeAgent {
-  name: string;
-  topics: string[];
-}
-
-interface WorkTreeProject {
-  project: string;
-  agents: WorkTreeAgent[];
-}
-
-// ---------------------------------------------------------------------------
-// Demo data
-// ---------------------------------------------------------------------------
-
-const WORKTREE: WorkTreeProject[] = [
-  { project: "exe-os", agents: [
-    { name: "yoshi", topics: ["architecture", "GraphRAG", "config versioning", "tmux routing"] },
-    { name: "tom", topics: ["TUI chat mode", "hooks parity", "wiki rebrand"] },
-    { name: "mari", topics: ["brand audit", "SEO strategy"] },
-  ]},
-  { project: "exe-wiki", agents: [
-    { name: "tom", topics: ["frontend rebrand", "server rebrand"] },
-  ]},
-  { project: "exe-create", agents: [
-    { name: "sasha", topics: ["video pipeline", "B-roll generation"] },
-  ]},
-];
-
-const DEMO_NODES: GraphNode[] = [
-  { id: "yoshi", label: "yoshi", type: "person", degree: 8 },
-  { id: "tom", label: "tom", type: "person", degree: 7 },
-  { id: "mari", label: "mari", type: "person", degree: 3 },
-  { id: "exe", label: "exe", type: "person", degree: 6 },
-  { id: "sasha", label: "sasha", type: "person", degree: 2 },
-  { id: "exe-os", label: "exe-os", type: "project", degree: 10 },
-  { id: "exe-wiki", label: "exe-wiki", type: "project", degree: 5 },
-  { id: "exe-create", label: "exe-create", type: "project", degree: 3 },
-  { id: "graphrag", label: "GraphRAG", type: "concept", degree: 5 },
-  { id: "tui-chat", label: "TUI Chat Mode", type: "concept", degree: 3 },
-  { id: "hooks", label: "CC Hooks", type: "concept", degree: 4 },
-  { id: "tmux-routing", label: "tmux routing", type: "concept", degree: 4 },
-  { id: "sqlcipher", label: "SQLCipher", type: "tool", degree: 3 },
-  { id: "vis-js", label: "vis.js", type: "tool", degree: 2 },
-  { id: "anthropic-sdk", label: "Anthropic SDK", type: "tool", degree: 3 },
-  { id: "remotion", label: "Remotion", type: "tool", degree: 2 },
-  { id: "decision-visjs", label: "vis.js over Three.js", type: "decision", degree: 2 },
-  { id: "decision-e2ee", label: "E2EE at rest", type: "decision", degree: 2 },
-  { id: "foundry-bold", label: "Exe Foundry Bold", type: "concept", degree: 4 },
-  { id: "permissions", label: "Permission Presets", type: "concept", degree: 3 },
-];
-
-const DEMO_EDGES: GraphEdge[] = [
-  { from: "yoshi", to: "graphrag", label: "implemented", weight: 0.9, confidence: 0.95 },
-  { from: "yoshi", to: "exe-os", label: "works_on", weight: 0.8, confidence: 1.0 },
-  { from: "yoshi", to: "tmux-routing", label: "implemented", weight: 0.7, confidence: 0.9 },
-  { from: "yoshi", to: "hooks", label: "designed", weight: 0.6, confidence: 0.85 },
-  { from: "yoshi", to: "decision-visjs", label: "decided", weight: 0.5, confidence: 0.9 },
-  { from: "tom", to: "tui-chat", label: "implemented", weight: 0.9, confidence: 0.95 },
-  { from: "tom", to: "exe-os", label: "works_on", weight: 0.8, confidence: 1.0 },
-  { from: "tom", to: "exe-wiki", label: "worked_on", weight: 0.7, confidence: 0.9 },
-  { from: "tom", to: "hooks", label: "implemented", weight: 0.8, confidence: 0.95 },
-  { from: "tom", to: "permissions", label: "implemented", weight: 0.7, confidence: 0.9 },
-  { from: "tom", to: "foundry-bold", label: "applied", weight: 0.6, confidence: 0.85 },
-  { from: "mari", to: "foundry-bold", label: "designed", weight: 0.8, confidence: 0.9 },
-  { from: "mari", to: "exe-os", label: "works_on", weight: 0.4, confidence: 1.0 },
-  { from: "exe", to: "yoshi", label: "manages", weight: 0.5, confidence: 1.0 },
-  { from: "exe", to: "tom", label: "manages", weight: 0.5, confidence: 1.0 },
-  { from: "exe", to: "mari", label: "manages", weight: 0.5, confidence: 1.0 },
-  { from: "exe", to: "sasha", label: "manages", weight: 0.4, confidence: 1.0 },
-  { from: "exe-os", to: "sqlcipher", label: "depends_on", weight: 0.7, confidence: 1.0 },
-  { from: "exe-os", to: "anthropic-sdk", label: "depends_on", weight: 0.6, confidence: 1.0 },
-  { from: "exe-os", to: "graphrag", label: "includes", weight: 0.8, confidence: 0.95 },
-  { from: "exe-wiki", to: "foundry-bold", label: "uses", weight: 0.6, confidence: 0.85 },
-  { from: "exe-create", to: "remotion", label: "depends_on", weight: 0.8, confidence: 1.0 },
-  { from: "sasha", to: "exe-create", label: "works_on", weight: 0.7, confidence: 1.0 },
-  { from: "decision-visjs", to: "vis-js", label: "chose", weight: 0.6, confidence: 0.9 },
-  { from: "decision-e2ee", to: "sqlcipher", label: "enables", weight: 0.5, confidence: 0.9 },
-  { from: "graphrag", to: "decision-visjs", label: "motivated", weight: 0.4, confidence: 0.8 },
-  { from: "tui-chat", to: "anthropic-sdk", label: "uses", weight: 0.5, confidence: 0.9 },
-  { from: "permissions", to: "exe-os", label: "part_of", weight: 0.5, confidence: 1.0 },
-];
-
-const DEMO_MEMORIES: Record<string, MemorySnippet[]> = {
-  yoshi: [
-    { text: "Implemented confidence scoring on memory facts — 0-1 at ingest, decay, corroboration", agent: "yoshi", project: "exe-os", timestamp: "2026-04-09T23:30:00Z", confidence: 0.95 },
-    { text: "Config versioning — version field, auto-migration, forward compat", agent: "yoshi", project: "exe-os", timestamp: "2026-04-10T00:15:00Z", confidence: 0.9 },
-  ],
-  tom: [
-    { text: "Wired agent loop into TUI CommandCenter — Mode 2 chat with read-only tools", agent: "tom", project: "exe-os", timestamp: "2026-04-10T06:12:00Z", confidence: 0.95 },
-    { text: "Rebranded exe-wiki frontend — 109 files, Exe Foundry Bold theme applied", agent: "tom", project: "exe-wiki", timestamp: "2026-04-10T01:44:00Z", confidence: 0.9 },
-  ],
-  graphrag: [
-    { text: "GraphRAG entity extraction runs at ingest time, builds knowledge graph in SQLite", agent: "yoshi", project: "exe-os", timestamp: "2026-04-08T14:00:00Z", confidence: 0.85 },
-    { text: "Chose vis.js over Three.js for wiki graph — 2D network is clearer for knowledge nav", agent: "yoshi", project: "exe-os", timestamp: "2026-04-07T10:00:00Z", confidence: 0.9 },
-  ],
-  "exe-os": [
-    { text: "Three-layer cognition: ingest → store → retrieve. Five runtime modes.", agent: "yoshi", project: "exe-os", timestamp: "2026-04-05T08:00:00Z", confidence: 0.95 },
-    { text: "v2 roadmap: scale (sharding→GraphRAG→IVF) + cloud + quantum-resistant E2EE", agent: "exe", project: "exe-os", timestamp: "2026-04-03T12:00:00Z", confidence: 0.9 },
-  ],
-};
-
-const CANNED_RESPONSES: Record<string, string> = {
-  yoshi: "Yoshi (CTO) has been focused on: GraphRAG confidence scoring, config versioning with auto-migration, and harness boundary CI tests. 3,820 memories across exe-os.",
-  tom: "Tom (Principal Engineer) recently completed: TUI chat mode wiring, PostCompact + InstructionsLoaded hooks, exe-wiki full rebrand (249 files), and role-based permission presets.",
-  graphrag: "GraphRAG extracts entities and relationships at ingest time into a knowledge graph stored in SQLite. Uses confidence scoring (0-1) with decay and corroboration. Visualization uses vis.js (2D network, not Three.js).",
-  "exe-os": "exe-os is the core memory system — three-layer cognition (ingest→store→retrieve), five runtime modes, E2EE at rest via SQLCipher. v2 adds domain sharding, GraphRAG, IVF indexes.",
-};
+import {
+  fetchWikiGraph,
+  fetchWikiMemories,
+  type WikiNode,
+  type WikiEdge,
+  type WikiMemory,
+  type WikiWorkTreeProject,
+} from "../services/exeOsData.js";
+import {
+  DEMO_WIKI_NODES,
+  DEMO_WIKI_EDGES,
+  DEMO_WIKI_MEMORIES,
+} from "../services/demoData.js";
 
 // ---------------------------------------------------------------------------
 // Node type colors (Exe Foundry Bold)
 // ---------------------------------------------------------------------------
 
-const NODE_COLORS: Record<GraphNode["type"], string> = {
+const NODE_COLORS: Record<WikiNode["type"], string> = {
   person: "#F5D76E",
   project: "#dec1ac",
   concept: "#ffb4a8",
@@ -324,12 +201,30 @@ export function WikiView() {
   const [chatInput, setChatInput] = useState("");
   const [chatResponse, setChatResponse] = useState<string | null>(null);
 
-  // Initialize vis.js network
+  // Live data state
+  const [nodes, setNodes] = useState<WikiNode[]>(DEMO_WIKI_NODES);
+  const [edges, setEdges] = useState<WikiEdge[]>(DEMO_WIKI_EDGES);
+  const [worktree, setWorktree] = useState<WikiWorkTreeProject[]>([]);
+  const [nodeMemories, setNodeMemories] = useState<WikiMemory[]>([]);
+
+  // Load graph data
+  useEffect(() => {
+    let cancelled = false;
+    fetchWikiGraph().then((result) => {
+      if (cancelled) return;
+      setNodes(result.nodes);
+      setEdges(result.edges);
+      setWorktree(result.worktree);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Initialize vis.js network when nodes/edges change
   useEffect(() => {
     if (!graphRef.current) return;
 
-    const nodes = new DataSet(
-      DEMO_NODES.map((n) => ({
+    const visNodes = new DataSet(
+      nodes.map((n) => ({
         id: n.id,
         label: n.label,
         color: {
@@ -346,8 +241,8 @@ export function WikiView() {
       })),
     );
 
-    const edges = new DataSet(
-      DEMO_EDGES.map((e, i) => ({
+    const visEdges = new DataSet(
+      edges.map((e, i) => ({
         id: `e${i}`,
         from: e.from,
         to: e.to,
@@ -356,11 +251,11 @@ export function WikiView() {
         color: { color: `rgba(76, 70, 55, ${0.3 + e.confidence * 0.7})`, highlight: "#F5D76E", hover: "#cfc6b1" },
         font: { color: "#98907d", size: 10, face: "Space Grotesk, sans-serif", strokeWidth: 0 },
         arrows: { to: { enabled: true, scaleFactor: 0.5 } },
-        smooth: { type: "continuous" as const },
+        smooth: { enabled: true, type: "continuous", roundness: 0.5 },
       })),
     );
 
-    const network = new Network(graphRef.current, { nodes, edges }, {
+    const network = new Network(graphRef.current, { nodes: visNodes, edges: visEdges }, {
       physics: {
         solver: "barnesHut",
         barnesHut: { gravitationalConstant: -3000, centralGravity: 0.1, springLength: 120 },
@@ -373,7 +268,7 @@ export function WikiView() {
         dragView: true,
       },
       nodes: { borderWidth: 0 },
-      edges: { smooth: { type: "continuous" } },
+      edges: { smooth: { enabled: true, type: "continuous", roundness: 0.5 } },
     });
 
     network.on("click", (params) => {
@@ -388,7 +283,33 @@ export function WikiView() {
       network.destroy();
       networkRef.current = null;
     };
-  }, []);
+  }, [nodes, edges]);
+
+  // Load memories when a node is selected
+  useEffect(() => {
+    if (!selectedNode) {
+      setNodeMemories([]);
+      return;
+    }
+
+    const nodeData = nodes.find((n) => n.id === selectedNode);
+    if (!nodeData) {
+      setNodeMemories([]);
+      return;
+    }
+
+    let cancelled = false;
+    fetchWikiMemories(nodeData.label).then((result) => {
+      if (cancelled) return;
+      if (result.memories.length > 0) {
+        setNodeMemories(result.memories);
+      } else {
+        // Fall back to demo memories for this node
+        setNodeMemories(DEMO_WIKI_MEMORIES[selectedNode] ?? []);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [selectedNode, nodes]);
 
   // Focus graph on a node
   const focusNode = useCallback((nodeId: string) => {
@@ -399,23 +320,32 @@ export function WikiView() {
     }
   }, []);
 
-  // Chat handler
+  // Chat handler — searches memories via service layer
   const handleChat = useCallback(() => {
-    const q = chatInput.trim().toLowerCase();
+    const q = chatInput.trim();
     if (!q) return;
 
-    let response = `I found ${Math.floor(Math.random() * 15) + 5} memories related to "${chatInput}". Key themes: architecture decisions, implementation patterns, team coordination.`;
-    for (const [key, val] of Object.entries(CANNED_RESPONSES)) {
-      if (q.includes(key)) { response = val; break; }
-    }
-    setChatResponse(response);
+    setChatResponse("Searching...");
     setChatInput("");
+
+    fetchWikiMemories(q).then((result) => {
+      if (result.memories.length > 0) {
+        const summary = result.memories
+          .slice(0, 5)
+          .map((m) => `- ${m.text}`)
+          .join("\n");
+        setChatResponse(
+          `Found ${result.memories.length} memories${result.isDemo ? " (demo)" : ""}:\n${summary}`,
+        );
+      } else {
+        setChatResponse(`No memories found for "${q}".`);
+      }
+    });
   }, [chatInput]);
 
-  // Get selected node data
-  const nodeData = selectedNode ? DEMO_NODES.find((n) => n.id === selectedNode) : null;
-  const nodeEdges = selectedNode ? DEMO_EDGES.filter((e) => e.from === selectedNode || e.to === selectedNode) : [];
-  const nodeMemories = selectedNode ? (DEMO_MEMORIES[selectedNode] ?? []) : [];
+  // Get selected node data for the detail panel
+  const nodeData = selectedNode ? nodes.find((n) => n.id === selectedNode) : null;
+  const nodeEdges = selectedNode ? edges.filter((e) => e.from === selectedNode || e.to === selectedNode) : [];
 
   return (
     <div style={s.container}>
@@ -423,7 +353,7 @@ export function WikiView() {
         {/* WorkTree */}
         <div style={s.workTree}>
           <div style={s.sectionTitle}>Knowledge Tree</div>
-          {WORKTREE.map((proj) => (
+          {worktree.map((proj) => (
             <div key={proj.project}>
               <div
                 style={s.treeProject(selectedNode === proj.project)}
@@ -440,12 +370,12 @@ export function WikiView() {
                     {agent.name}
                   </div>
                   {agent.topics.map((topic) => {
-                    const topicId = DEMO_NODES.find((n) => n.label.toLowerCase() === topic.toLowerCase())?.id;
+                    const topicNode = nodes.find((n) => n.label.toLowerCase() === topic.toLowerCase());
                     return (
                       <div
                         key={topic}
-                        style={s.treeTopic(selectedNode === topicId)}
-                        onClick={() => topicId && focusNode(topicId)}
+                        style={s.treeTopic(selectedNode === topicNode?.id)}
+                        onClick={() => topicNode && focusNode(topicNode.id)}
                       >
                         {topic}
                       </div>
@@ -480,9 +410,12 @@ export function WikiView() {
                   {nodeEdges.map((e, i) => {
                     const target = e.from === selectedNode ? e.to : e.from;
                     const dir = e.from === selectedNode ? "\u2192" : "\u2190";
+                    // Resolve target label from nodes if possible
+                    const targetNode = nodes.find((n) => n.id === target);
+                    const targetLabel = targetNode ? targetNode.label : target;
                     return (
                       <div key={i} style={s.relation}>
-                        {dir} <span style={{ color: "var(--primary-dim)" }}>{e.label}</span> {target}
+                        {dir} <span style={{ color: "var(--primary-dim)" }}>{e.label}</span> {targetLabel}
                       </div>
                     );
                   })}
@@ -514,7 +447,7 @@ export function WikiView() {
       {/* Chat response */}
       {chatResponse && (
         <div style={s.chatResponse}>
-          <div style={{ fontFamily: "var(--font-body)", fontSize: 13, color: "var(--on-surface)" }}>
+          <div style={{ fontFamily: "var(--font-body)", fontSize: 13, color: "var(--on-surface)", whiteSpace: "pre-line" }}>
             {chatResponse}
           </div>
         </div>

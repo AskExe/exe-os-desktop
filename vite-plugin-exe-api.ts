@@ -70,6 +70,15 @@ export default function exeApiPlugin(): Plugin {
             case "license":
               res.end(JSON.stringify(await getLicense()));
               break;
+            case "wiki-graph":
+              res.end(JSON.stringify(await getWikiGraph()));
+              break;
+            case "wiki-memories": {
+              const url = new URL(req.url!, `http://${req.headers.host}`);
+              const q = url.searchParams.get("q") || "";
+              res.end(JSON.stringify(await getWikiMemories(q)));
+              break;
+            }
             default:
               res.statusCode = 404;
               res.end(JSON.stringify({ error: "not_found" }));
@@ -258,5 +267,71 @@ async function getConfig(): Promise<Record<string, unknown>> {
     return { ...config, license, cloud };
   } catch {
     return {};
+  }
+}
+
+async function getWikiGraph(): Promise<{ entities: unknown[]; relationships: unknown[] }> {
+  const client = await getDb();
+  if (!client) return { entities: [], relationships: [] };
+
+  try {
+    const entResult = await client.execute(
+      "SELECT id, name, type, first_seen, last_seen FROM entities ORDER BY last_seen DESC LIMIT 200",
+    );
+    const relResult = await client.execute(
+      `SELECT r.source_entity_id, r.target_entity_id, r.type, r.weight,
+              COALESCE(r.confidence, 1.0) as confidence,
+              s.name as source_name, t.name as target_name
+       FROM relationships r
+       JOIN entities s ON r.source_entity_id = s.id
+       JOIN entities t ON r.target_entity_id = t.id
+       ORDER BY r.weight DESC LIMIT 500`,
+    );
+    return {
+      entities: entResult.rows.map((r: Record<string, unknown>) => ({
+        id: String(r.id),
+        name: String(r.name),
+        type: String(r.type),
+        first_seen: String(r.first_seen),
+        last_seen: String(r.last_seen),
+      })),
+      relationships: relResult.rows.map((r: Record<string, unknown>) => ({
+        source_entity_id: String(r.source_entity_id),
+        target_entity_id: String(r.target_entity_id),
+        source_name: String(r.source_name),
+        target_name: String(r.target_name),
+        type: String(r.type),
+        weight: Number(r.weight),
+        confidence: Number(r.confidence),
+      })),
+    };
+  } catch {
+    return { entities: [], relationships: [] };
+  }
+}
+
+async function getWikiMemories(query: string): Promise<unknown[]> {
+  if (!query) return [];
+  const client = await getDb();
+  if (!client) return [];
+
+  try {
+    const result = await client.execute({
+      sql: `SELECT m.content, m.agent_id, m.project_name, m.created_at,
+                   COALESCE(m.confidence, 1.0) as confidence
+            FROM memories m
+            WHERE LOWER(m.content) LIKE ?
+            ORDER BY m.created_at DESC LIMIT 20`,
+      args: [`%${query.toLowerCase()}%`],
+    });
+    return result.rows.map((r: Record<string, unknown>) => ({
+      text: String(r.content),
+      agent: String(r.agent_id ?? ""),
+      project: String(r.project_name ?? ""),
+      timestamp: String(r.created_at),
+      confidence: Number(r.confidence),
+    }));
+  } catch {
+    return [];
   }
 }

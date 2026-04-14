@@ -64,6 +64,29 @@ export interface ProviderRow {
   source: "env" | "config" | "none";
 }
 
+export interface GraphEntity {
+  id: string;
+  name: string;
+  type: string;
+  first_seen: string;
+  last_seen: string;
+}
+
+export interface GraphRelationship {
+  source_entity_id: string;
+  target_entity_id: string;
+  source_name: string;
+  target_name: string;
+  type: string;
+  weight: number;
+  confidence: number;
+}
+
+export interface GraphResult {
+  entities: GraphEntity[];
+  relationships: GraphRelationship[];
+}
+
 export interface TaskFilter {
   assignedTo?: string;
   status?: string;
@@ -98,6 +121,11 @@ export async function getConfig(): Promise<Record<string, unknown>> {
 
 export async function checkLicense(): Promise<LicenseResult> {
   const json = await invoke<string>("check_license");
+  return JSON.parse(json);
+}
+
+export async function queryGraph(): Promise<GraphResult> {
+  const json = await invoke<string>("query_graph");
   return JSON.parse(json);
 }
 
