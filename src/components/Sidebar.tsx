@@ -1,6 +1,6 @@
 import React from "react";
 
-export type TabKey = "office" | "work" | "team" | "gateway" | "external" | "wiki" | "settings";
+export type TabKey = "office" | "work" | "wiki" | "crm" | "team" | "settings";
 
 interface TabDef {
   key: TabKey;
@@ -11,10 +11,9 @@ interface TabDef {
 const TABS: TabDef[] = [
   { key: "office", label: "Office", icon: "desktop_windows" },
   { key: "work", label: "Work", icon: "work" },
-  { key: "team", label: "Team", icon: "group" },
-  { key: "gateway", label: "Gateway", icon: "router" },
-  { key: "external", label: "External", icon: "open_in_new" },
   { key: "wiki", label: "Wiki", icon: "menu_book" },
+  { key: "crm", label: "CRM", icon: "contacts" },
+  { key: "team", label: "Team", icon: "group" },
   { key: "settings", label: "Settings", icon: "settings" },
 ];
 

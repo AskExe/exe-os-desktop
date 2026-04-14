@@ -4,10 +4,9 @@ import type { TabKey } from "./Sidebar";
 const TAB_TITLES: Record<TabKey, string> = {
   office: "Virtual Office",
   work: "Work Dashboard",
-  team: "Team Roster",
-  gateway: "Gateway",
-  external: "External Agents",
   wiki: "Company Wiki",
+  crm: "Exe CRM",
+  team: "Team Roster",
   settings: "Settings",
 };
 

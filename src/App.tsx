@@ -4,10 +4,9 @@ import { Sidebar, type TabKey } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { OfficeView } from "./views/Office";
 import { WorkView } from "./views/Work";
-import { TeamView } from "./views/Team";
-import { ExternalView } from "./views/External";
-import { GatewayView } from "./views/Gateway";
 import { WikiView } from "./views/Wiki";
+import CRM from "./views/CRM";
+import { TeamView } from "./views/Team";
 import { SettingsView } from "./views/Settings";
 
 const CHAT_PANEL_WIDTH = 420;
@@ -15,10 +14,9 @@ const CHAT_PANEL_WIDTH = 420;
 const views: Record<TabKey, React.FC> = {
   office: OfficeView,
   work: WorkView,
-  team: TeamView,
-  gateway: GatewayView,
-  external: ExternalView,
   wiki: WikiView,
+  crm: CRM,
+  team: TeamView,
   settings: SettingsView,
 };
 
