@@ -66,7 +66,7 @@ jobs:
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
 
-          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o "$CERT_PATH"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$CERT_PATH"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
@@ -79,12 +79,12 @@ jobs:
 
       # ── Build both architectures ──────────────────────────────────────
       - name: Build aarch64
-        run: cargo tauri build --target aarch64-apple-darwin
+        run: npx tauri build --target aarch64-apple-darwin
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
 
       - name: Build x86_64
-        run: cargo tauri build --target x86_64-apple-darwin
+        run: npx tauri build --target x86_64-apple-darwin
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
 
@@ -174,28 +174,26 @@ jobs:
           fi
 
       # ── Generate latest.json for auto-updater ────────────────────────
+      # Uses node for proper JSON escaping (signatures may contain special chars)
       - name: Generate updater manifest
         run: |
-          VERSION="${GITHUB_REF_NAME}"
-          SIGNATURE=$(cat "${UPDATER_TAR}.sig")
-          DOWNLOAD_URL="https://github.com/AskExe/exe-os-desktop/releases/download/${VERSION}/${UPDATER_TAR}"
+          export TAG="${GITHUB_REF_NAME}"
+          export SIGNATURE=$(cat "${UPDATER_TAR}.sig")
+          export UPDATER_TAR
 
-          cat > latest.json << MANIFEST
-          {
-            "version": "${VERSION}",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "darwin-aarch64": {
-                "url": "${DOWNLOAD_URL}",
-                "signature": "${SIGNATURE}"
-              },
-              "darwin-x86_64": {
-                "url": "${DOWNLOAD_URL}",
-                "signature": "${SIGNATURE}"
+          node -e "
+            const {TAG, SIGNATURE, UPDATER_TAR} = process.env;
+            const url = 'https://github.com/AskExe/exe-os-desktop/releases/download/' + TAG + '/' + UPDATER_TAR;
+            const manifest = {
+              version: TAG,
+              pub_date: new Date().toISOString(),
+              platforms: {
+                'darwin-aarch64': { url, signature: SIGNATURE },
+                'darwin-x86_64': { url, signature: SIGNATURE }
               }
-            }
-          }
-          MANIFEST
+            };
+            require('fs').writeFileSync('latest.json', JSON.stringify(manifest, null, 2));
+          "
 
       # ── Upload to GitHub Release ──────────────────────────────────────
       - name: Upload to GitHub Release

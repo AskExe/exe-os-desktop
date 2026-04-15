@@ -45,13 +45,13 @@ jobs:
 
       # ── Build both architectures (unsigned) ───────────────────────────
       - name: Build aarch64
-        run: cargo tauri build --target aarch64-apple-darwin
+        run: npx tauri build --target aarch64-apple-darwin
         env:
           # Skip signing for dev builds
           APPLE_SIGNING_IDENTITY: "-"
 
       - name: Build x86_64
-        run: cargo tauri build --target x86_64-apple-darwin
+        run: npx tauri build --target x86_64-apple-darwin
         env:
           APPLE_SIGNING_IDENTITY: "-"
 
