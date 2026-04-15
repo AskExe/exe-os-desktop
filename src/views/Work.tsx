@@ -1,8 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { fetchTasks, type Task } from "../services/exeOsData.js";
+import { ChatView } from "./ChatView.js";
+import { SessionControls } from "../components/SessionControls.js";
 
 type StatusFilter = "all" | Task["status"];
 type PriorityFilter = "all" | Task["priority"];
+type WorkMode = "tasks" | "chat";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -200,11 +203,13 @@ const s = {
 // ---------------------------------------------------------------------------
 
 export function WorkView() {
+  const [mode, setMode] = useState<WorkMode>("tasks");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reviewTasks, setReviewTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks().then(({ tasks: t, reviewTasks: r }) => {
@@ -235,6 +240,47 @@ export function WorkView() {
 
   return (
     <div style={s.container}>
+      {/* Mode toggle: Tasks / Chat */}
+      <div style={s.filterBar}>
+        <button
+          style={s.filterChip(mode === "tasks")}
+          onClick={() => setMode("tasks")}
+        >
+          Tasks
+        </button>
+        <button
+          style={s.filterChip(mode === "chat")}
+          onClick={() => setMode("chat")}
+        >
+          Agent Chat
+        </button>
+      </div>
+
+      {mode === "chat" ? (
+        <div style={{ display: "flex", flex: 1, gap: 8, minHeight: 0 }}>
+          <div style={{ width: 300, flexShrink: 0, overflow: "auto" }}>
+            <SessionControls onSelectSession={setActiveSessionId} />
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            {activeSessionId ? (
+              <ChatView sessionId={activeSessionId} />
+            ) : (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+                color: "var(--outline)",
+                fontFamily: "var(--font-body)",
+                fontSize: 14,
+              }}>
+                Select or start a session to begin chatting
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Summary bar */}
       <div style={s.summaryBar}>
         {([
@@ -342,6 +388,8 @@ export function WorkView() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

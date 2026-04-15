@@ -192,7 +192,11 @@ const s = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function SessionControls() {
+interface SessionControlsProps {
+  onSelectSession?: (sessionId: string) => void;
+}
+
+export function SessionControls({ onSelectSession }: SessionControlsProps = {}) {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [daemon, setDaemon] = useState<DaemonStatus | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -364,7 +368,8 @@ export function SessionControls() {
             sessions.map((session) => (
               <div
                 key={session.sessionId}
-                style={s.sessionCard}
+                style={{ ...s.sessionCard, cursor: onSelectSession ? "pointer" : "default" }}
+                onClick={() => onSelectSession?.(session.sessionId)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "var(--surface-container)";
                 }}
