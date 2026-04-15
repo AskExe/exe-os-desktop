@@ -1,0 +1,214 @@
+name: Build & Release (macOS)
+
+# Trigger on version tags (e.g. v0.1.0, v1.0.0-beta.1)
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: "Exe OS"
+  BUNDLE_ID: com.askexe.exe-os
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      # The local package.json references "exe-os": "file:../exe-os" for dev.
+      # In CI we override to pull the published npm package instead.
+      - name: Override local exe-os dependency
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            pkg.dependencies['exe-os'] = 'latest';
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Install dependencies
+        run: npm install
+
+      # ── Apple code-signing setup ──────────────────────────────────────
+      # Secrets required (base64-encoded .p12 cert + password):
+      #   APPLE_CERTIFICATE              — base64 of Developer ID Application .p12
+      #   APPLE_CERTIFICATE_PASSWORD     — password for the .p12
+      #   APPLE_SIGNING_IDENTITY         — e.g. "Developer ID Application: Ask Exe Inc (TEAMID)"
+      #   APPLE_ID                       — Apple ID email for notarization
+      #   APPLE_TEAM_ID                  — 10-char Apple team ID
+      #   APPLE_APP_SPECIFIC_PASSWORD    — app-specific password for notarytool
+      - name: Import Apple certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+      # ── Build both architectures ──────────────────────────────────────
+      - name: Build aarch64
+        run: cargo tauri build --target aarch64-apple-darwin
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+
+      - name: Build x86_64
+        run: cargo tauri build --target x86_64-apple-darwin
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+
+      # ── Universal binary via lipo ─────────────────────────────────────
+      - name: Create universal binary
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          AARCH64_APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/${APP_NAME}.app"
+          X86_64_APP="src-tauri/target/x86_64-apple-darwin/release/bundle/macos/${APP_NAME}.app"
+          UNIVERSAL_DIR="src-tauri/target/universal/bundle/macos"
+          UNIVERSAL_APP="${UNIVERSAL_DIR}/${APP_NAME}.app"
+
+          mkdir -p "$UNIVERSAL_DIR"
+
+          # Copy full aarch64 bundle as base
+          cp -R "$AARCH64_APP" "$UNIVERSAL_APP"
+
+          # Replace binary with universal via lipo
+          lipo -create \
+            "$AARCH64_APP/Contents/MacOS/${APP_NAME}" \
+            "$X86_64_APP/Contents/MacOS/${APP_NAME}" \
+            -output "$UNIVERSAL_APP/Contents/MacOS/${APP_NAME}"
+
+          echo "UNIVERSAL_APP=${UNIVERSAL_APP}" >> $GITHUB_ENV
+          echo "UNIVERSAL_DIR=${UNIVERSAL_DIR}" >> $GITHUB_ENV
+
+      # ── Sign universal binary ─────────────────────────────────────────
+      - name: Sign universal app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          codesign --force --deep --sign "$APPLE_SIGNING_IDENTITY" \
+            --options runtime \
+            "$UNIVERSAL_APP"
+
+      # ── Package DMG ───────────────────────────────────────────────────
+      - name: Create DMG
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          DMG_NAME="Exe-OS_${VERSION}_universal.dmg"
+          hdiutil create -volname "$APP_NAME" \
+            -srcfolder "$UNIVERSAL_APP" \
+            -ov -format UDZO "$DMG_NAME"
+          codesign --force --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" "$DMG_NAME"
+          echo "DMG_NAME=${DMG_NAME}" >> $GITHUB_ENV
+
+      # ── Notarize ──────────────────────────────────────────────────────
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          xcrun notarytool submit "$DMG_NAME" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_PASSWORD" \
+            --wait
+
+          xcrun stapler staple "$DMG_NAME"
+
+      # ── Updater artifacts ─────────────────────────────────────────────
+      # tauri-plugin-updater expects a .tar.gz of the .app + a .sig file
+      - name: Create updater bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          UPDATER_TAR="Exe-OS_${VERSION}_universal.app.tar.gz"
+          cd "$UNIVERSAL_DIR"
+          tar -czf "$GITHUB_WORKSPACE/$UPDATER_TAR" "${APP_NAME}.app"
+          echo "UPDATER_TAR=${UPDATER_TAR}" >> $GITHUB_ENV
+
+      # Sign the updater bundle with the Tauri updater private key
+      # Secret: TAURI_SIGNING_PRIVATE_KEY — the minisign private key matching the pubkey in tauri.conf.json
+      - name: Sign updater bundle
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          # If Tauri generated a .sig during the aarch64 build, prefer that
+          AARCH64_SIG="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/${APP_NAME}.app.tar.gz.sig"
+          if [ -f "$AARCH64_SIG" ]; then
+            cp "$AARCH64_SIG" "${UPDATER_TAR}.sig"
+          else
+            echo "WARNING: No .sig file found — updater signature must be generated manually" >&2
+            echo "no-signature" > "${UPDATER_TAR}.sig"
+          fi
+
+      # ── Generate latest.json for auto-updater ────────────────────────
+      - name: Generate updater manifest
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          SIGNATURE=$(cat "${UPDATER_TAR}.sig")
+          DOWNLOAD_URL="https://github.com/AskExe/exe-os-desktop/releases/download/${VERSION}/${UPDATER_TAR}"
+
+          cat > latest.json << MANIFEST
+          {
+            "version": "${VERSION}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": {
+                "url": "${DOWNLOAD_URL}",
+                "signature": "${SIGNATURE}"
+              },
+              "darwin-x86_64": {
+                "url": "${DOWNLOAD_URL}",
+                "signature": "${SIGNATURE}"
+              }
+            }
+          }
+          MANIFEST
+
+      # ── Upload to GitHub Release ──────────────────────────────────────
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.DMG_NAME }}
+            ${{ env.UPDATER_TAR }}
+            ${{ env.UPDATER_TAR }}.sig
+            latest.json
+          generate_release_notes: true
+
+      # ── Cleanup keychain ──────────────────────────────────────────────
+      - name: Cleanup
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true

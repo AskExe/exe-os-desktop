@@ -1,0 +1,92 @@
+name: Dev Build (macOS)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  APP_NAME: "Exe OS"
+
+jobs:
+  build-macos-dev:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      # Override local file: dependency with published package for CI
+      - name: Override local exe-os dependency
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            pkg.dependencies['exe-os'] = 'latest';
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Install dependencies
+        run: npm install
+
+      # ── Build both architectures (unsigned) ───────────────────────────
+      - name: Build aarch64
+        run: cargo tauri build --target aarch64-apple-darwin
+        env:
+          # Skip signing for dev builds
+          APPLE_SIGNING_IDENTITY: "-"
+
+      - name: Build x86_64
+        run: cargo tauri build --target x86_64-apple-darwin
+        env:
+          APPLE_SIGNING_IDENTITY: "-"
+
+      # ── Universal binary via lipo ─────────────────────────────────────
+      - name: Create universal binary
+        run: |
+          AARCH64_APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/${APP_NAME}.app"
+          X86_64_APP="src-tauri/target/x86_64-apple-darwin/release/bundle/macos/${APP_NAME}.app"
+          UNIVERSAL_DIR="src-tauri/target/universal/bundle/macos"
+          UNIVERSAL_APP="${UNIVERSAL_DIR}/${APP_NAME}.app"
+
+          mkdir -p "$UNIVERSAL_DIR"
+          cp -R "$AARCH64_APP" "$UNIVERSAL_APP"
+
+          lipo -create \
+            "$AARCH64_APP/Contents/MacOS/${APP_NAME}" \
+            "$X86_64_APP/Contents/MacOS/${APP_NAME}" \
+            -output "$UNIVERSAL_APP/Contents/MacOS/${APP_NAME}"
+
+          echo "UNIVERSAL_DIR=${UNIVERSAL_DIR}" >> $GITHUB_ENV
+
+      # ── Package unsigned DMG ──────────────────────────────────────────
+      - name: Create DMG
+        run: |
+          SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
+          DMG_NAME="Exe-OS_dev-${SHA}_universal.dmg"
+          hdiutil create -volname "$APP_NAME (Dev)" \
+            -srcfolder "${UNIVERSAL_DIR}/${APP_NAME}.app" \
+            -ov -format UDZO "$DMG_NAME"
+          echo "DMG_NAME=${DMG_NAME}" >> $GITHUB_ENV
+
+      # ── Upload as workflow artifact (7-day retention) ─────────────────
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-os-desktop-dev-${{ github.sha }}
+          path: ${{ env.DMG_NAME }}
+          retention-days: 7
