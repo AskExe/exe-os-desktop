@@ -146,6 +146,17 @@ export async function openCrmWindow(): Promise<void> {
   await invoke<void>("open_crm_window");
 }
 
+export interface DaemonStatusResult {
+  running: boolean;
+  port: number;
+  pid: number;
+}
+
+export async function daemonStatus(): Promise<DaemonStatusResult> {
+  const result = await invoke<DaemonStatusResult>("daemon_status");
+  return result;
+}
+
 export async function spawnSession(
   employeeName: string,
   exeSession: string,
