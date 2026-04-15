@@ -1,3 +1,5 @@
+mod daemon;
+
 use std::process::Command;
 
 use tauri::Manager;
@@ -8,7 +10,7 @@ use tauri_plugin_updater::UpdaterExt;
 // ---------------------------------------------------------------------------
 
 /// Resolve the exe-os dist directory from the global npm install.
-fn resolve_exe_os_dist() -> Result<String, String> {
+pub(crate) fn resolve_exe_os_dist() -> Result<String, String> {
     let output = Command::new("npm")
         .args(["root", "-g"])
         .output()
@@ -275,6 +277,9 @@ pub fn run() {
             check_license,
             open_crm_window,
             spawn_session,
+            daemon::start_daemon,
+            daemon::stop_daemon,
+            daemon::daemon_status,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -290,10 +295,18 @@ pub fn run() {
                 check_for_updates(handle).await;
             });
 
+            // Auto-start the exe-os daemon after updater check
+            daemon::auto_start();
+
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                daemon::graceful_shutdown();
+            }
+        });
 }
 
 async fn check_for_updates(app: tauri::AppHandle) {
