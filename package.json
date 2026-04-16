@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.5",
+    "@types/dompurify": "^3.0.5",
+    "dompurify": "^3.4.0",
     "exe-os": "file:../exe-os",
     "marked": "^18.0.0",
     "react": "^18.3.0",

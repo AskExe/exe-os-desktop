@@ -25,9 +25,19 @@ pub(crate) fn resolve_exe_os_dist() -> Result<String, String> {
 }
 
 /// Run a Node.js one-liner that imports an exe-os module and prints JSON to stdout.
-fn run_node_script(script: &str) -> Result<String, String> {
-    let output = Command::new("node")
-        .args(["--input-type=module", "-e", script])
+///
+/// The `script` MUST be a compile-time string with no interpolated user input.
+/// Dynamic values flow to the Node process via `env` (keyed environment
+/// variables) and are read inside the script with `process.env.FOO`. This
+/// guarantees nothing user-controlled is ever parsed as JavaScript source.
+fn run_node_script(script: &'static str, env: &[(&str, &str)]) -> Result<String, String> {
+    let mut cmd = Command::new("node");
+    cmd.args(["--input-type=module", "-e", script]);
+    for (key, value) in env {
+        cmd.env(key, value);
+    }
+
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to spawn node: {}", e))?;
 
@@ -41,6 +51,103 @@ fn run_node_script(script: &str) -> Result<String, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Static Node scripts — no interpolation, read all dynamic values from env.
+// ---------------------------------------------------------------------------
+
+const LIST_TASKS_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+const filter = process.env.FILTER_JSON ? JSON.parse(process.env.FILTER_JSON) : {};
+import(dist + "/lib/store.js").then(s => s.initStore()).then(async () => {
+    const m = await import(dist + "/lib/tasks.js");
+    const tasks = await m.listTasks(filter);
+    console.log(JSON.stringify(tasks));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+const LIST_EMPLOYEES_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+import(dist + "/lib/employees.js").then(m => {
+    const employees = m.loadEmployees();
+    console.log(JSON.stringify(employees));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+const RECALL_MEMORY_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+const query = process.env.QUERY;
+const limit = Number.parseInt(process.env.LIMIT, 10);
+import(dist + "/lib/store.js").then(s => s.initStore()).then(async () => {
+    const m = await import(dist + "/lib/hybrid-search.js");
+    const results = await m.lightweightSearch(query, { limit });
+    console.log(JSON.stringify(results));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+const GET_CONFIG_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+import(dist + "/lib/config.js").then(m => {
+    const config = m.loadConfigSync();
+    console.log(JSON.stringify(config));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+const CHECK_LICENSE_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+import(dist + "/lib/license.js").then(async m => {
+    const license = await m.checkLicense();
+    console.log(JSON.stringify({
+        valid: license.valid,
+        plan: license.plan,
+        email: license.email,
+        expiresAt: license.expiresAt,
+    }));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+const QUERY_GRAPH_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+import(dist + "/lib/store.js").then(s => s.initStore()).then(async () => {
+    const db = await import(dist + "/lib/database.js");
+    const client = db.getClient();
+    const entResult = await client.execute(
+        "SELECT id, name, type, first_seen, last_seen FROM entities ORDER BY last_seen DESC LIMIT 200"
+    );
+    const relResult = await client.execute(
+        `SELECT r.source_entity_id, r.target_entity_id, r.type, r.weight,
+                COALESCE(r.confidence, 1.0) as confidence,
+                s.name as source_name, t.name as target_name
+         FROM relationships r
+         JOIN entities s ON r.source_entity_id = s.id
+         JOIN entities t ON r.target_entity_id = t.id
+         ORDER BY r.weight DESC LIMIT 500`
+    );
+    console.log(JSON.stringify({
+        entities: entResult.rows,
+        relationships: relResult.rows,
+    }));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+const LIST_PROVIDERS_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+import(dist + "/bin/list-providers.js").then(m => {
+    const providers = m.buildProviderList(process.env, m.readConfigProviders());
+    console.log(JSON.stringify(providers));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+const SPAWN_SESSION_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+const name = process.env.EMPLOYEE_NAME;
+const exe = process.env.EXE_SESSION;
+const cwd = process.env.WORKING_DIR;
+import(dist + "/lib/tmux-routing.js").then(m => {
+    const result = m.ensureEmployee(name, exe, cwd);
+    console.log(JSON.stringify(result));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
+// ---------------------------------------------------------------------------
 // Tauri IPC commands
 // ---------------------------------------------------------------------------
 
@@ -49,147 +156,55 @@ async fn list_tasks(filter: Option<String>) -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
     let filter_json = filter.unwrap_or_else(|| "{}".to_string());
 
-    let script = format!(
-        r#"
-        import("{dist}/lib/store.js").then(s => s.initStore()).then(async () => {{
-            const m = await import("{dist}/lib/tasks.js");
-            const filter = {filter_json};
-            const tasks = await m.listTasks(filter);
-            console.log(JSON.stringify(tasks));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-        filter_json = filter_json,
-    );
-
-    run_node_script(&script)
+    run_node_script(
+        LIST_TASKS_SCRIPT,
+        &[("EXE_OS_DIST", &dist), ("FILTER_JSON", &filter_json)],
+    )
 }
 
 #[tauri::command]
 async fn list_employees() -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
-
-    let script = format!(
-        r#"
-        import("{dist}/lib/employees.js").then(m => {{
-            const employees = m.loadEmployees();
-            console.log(JSON.stringify(employees));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-    );
-
-    run_node_script(&script)
+    run_node_script(LIST_EMPLOYEES_SCRIPT, &[("EXE_OS_DIST", &dist)])
 }
 
 #[tauri::command]
 async fn recall_memory(query: String, limit: Option<u32>) -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
-    let max = limit.unwrap_or(10);
+    let max = limit.unwrap_or(10).to_string();
 
-    let script = format!(
-        r#"
-        import("{dist}/lib/store.js").then(s => s.initStore()).then(async () => {{
-            const m = await import("{dist}/lib/hybrid-search.js");
-            const results = await m.lightweightSearch("{query}", {{ limit: {max} }});
-            console.log(JSON.stringify(results));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-        query = query.replace('"', r#"\""#),
-        max = max,
-    );
-
-    run_node_script(&script)
+    run_node_script(
+        RECALL_MEMORY_SCRIPT,
+        &[
+            ("EXE_OS_DIST", &dist),
+            ("QUERY", &query),
+            ("LIMIT", &max),
+        ],
+    )
 }
 
 #[tauri::command]
 async fn get_config() -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
-
-    let script = format!(
-        r#"
-        import("{dist}/lib/config.js").then(m => {{
-            const config = m.loadConfigSync();
-            console.log(JSON.stringify(config));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-    );
-
-    run_node_script(&script)
+    run_node_script(GET_CONFIG_SCRIPT, &[("EXE_OS_DIST", &dist)])
 }
 
 #[tauri::command]
 async fn check_license() -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
-
-    let script = format!(
-        r#"
-        import("{dist}/lib/license.js").then(async m => {{
-            const license = await m.checkLicense();
-            console.log(JSON.stringify({{
-                valid: license.valid,
-                plan: license.plan,
-                email: license.email,
-                expiresAt: license.expiresAt
-            }}));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-    );
-
-    run_node_script(&script)
+    run_node_script(CHECK_LICENSE_SCRIPT, &[("EXE_OS_DIST", &dist)])
 }
 
 #[tauri::command]
 async fn query_graph() -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
-
-    let script = format!(
-        r#"
-        import("{dist}/lib/store.js").then(s => s.initStore()).then(async () => {{
-            const db = await import("{dist}/lib/database.js");
-            const client = db.getClient();
-            const entResult = await client.execute(
-                "SELECT id, name, type, first_seen, last_seen FROM entities ORDER BY last_seen DESC LIMIT 200"
-            );
-            const relResult = await client.execute(
-                `SELECT r.source_entity_id, r.target_entity_id, r.type, r.weight,
-                        COALESCE(r.confidence, 1.0) as confidence,
-                        s.name as source_name, t.name as target_name
-                 FROM relationships r
-                 JOIN entities s ON r.source_entity_id = s.id
-                 JOIN entities t ON r.target_entity_id = t.id
-                 ORDER BY r.weight DESC LIMIT 500`
-            );
-            console.log(JSON.stringify({{
-                entities: entResult.rows,
-                relationships: relResult.rows,
-            }}));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-    );
-
-    run_node_script(&script)
+    run_node_script(QUERY_GRAPH_SCRIPT, &[("EXE_OS_DIST", &dist)])
 }
 
 #[tauri::command]
 async fn list_providers() -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
-
-    let script = format!(
-        r#"
-        import("{dist}/bin/list-providers.js").then(m => {{
-            const providers = m.buildProviderList(process.env, m.readConfigProviders());
-            console.log(JSON.stringify(providers));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-    );
-
-    run_node_script(&script)
+    run_node_script(LIST_PROVIDERS_SCRIPT, &[("EXE_OS_DIST", &dist)])
 }
 
 /// Open the exe-crm web app in a native OS webview window.
@@ -240,23 +255,22 @@ async fn open_crm_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn spawn_session(employee_name: String, exe_session: String, working_dir: String) -> Result<String, String> {
+async fn spawn_session(
+    employee_name: String,
+    exe_session: String,
+    working_dir: String,
+) -> Result<String, String> {
     let dist = resolve_exe_os_dist()?;
 
-    let script = format!(
-        r#"
-        import("{dist}/lib/tmux-routing.js").then(m => {{
-            const result = m.ensureEmployee("{name}", "{exe}", "{cwd}");
-            console.log(JSON.stringify(result));
-        }}).catch(e => {{ console.error(e); process.exit(1); }});
-        "#,
-        dist = dist,
-        name = employee_name.replace('"', r#"\""#),
-        exe = exe_session.replace('"', r#"\""#),
-        cwd = working_dir.replace('"', r#"\""#),
-    );
-
-    run_node_script(&script)
+    run_node_script(
+        SPAWN_SESSION_SCRIPT,
+        &[
+            ("EXE_OS_DIST", &dist),
+            ("EMPLOYEE_NAME", &employee_name),
+            ("EXE_SESSION", &exe_session),
+            ("WORKING_DIR", &working_dir),
+        ],
+    )
 }
 
 // ---------------------------------------------------------------------------
