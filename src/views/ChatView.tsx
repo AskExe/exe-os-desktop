@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import { agentService } from "../services/agentService.js";
 import type { AgentEvent, PermissionRequest as IPCPermissionRequest } from "../services/agentTypes.js";
 import {
@@ -63,7 +64,8 @@ marked.setOptions({ breaks: true, gfm: true });
 // ---------------------------------------------------------------------------
 
 function renderMarkdown(md: string): string {
-  return marked.parse(md, { async: false }) as string;
+  const rawHtml = marked.parse(md, { async: false }) as string;
+  return DOMPurify.sanitize(rawHtml);
 }
 
 let entryCounter = 0;
