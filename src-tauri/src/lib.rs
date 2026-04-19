@@ -3,6 +3,8 @@ mod daemon;
 use std::process::Command;
 
 use tauri::Manager;
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::tray::TrayIconBuilder;
 use tauri_plugin_updater::UpdaterExt;
 
 // ---------------------------------------------------------------------------
@@ -302,6 +304,51 @@ pub fn run() {
                         .level(log::LevelFilter::Info)
                         .build(),
                 )?;
+            }
+
+            // --- System tray ---
+            let show_hide = MenuItemBuilder::with_id("show_hide", "Show/Hide")
+                .build(app)?;
+            let quit = MenuItemBuilder::with_id("quit", "Quit")
+                .build(app)?;
+            let tray_menu = MenuBuilder::new(app)
+                .items(&[&show_hide, &quit])
+                .build()?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().cloned().expect("no app icon"))
+                .menu(&tray_menu)
+                .tooltip("Exe OS")
+                .on_menu_event(|app, event| {
+                    match event.id().as_ref() {
+                        "show_hide" => {
+                            if let Some(win) = app.get_webview_window("main") {
+                                if win.is_visible().unwrap_or(false) {
+                                    let _ = win.hide();
+                                } else {
+                                    let _ = win.show();
+                                    let _ = win.set_focus();
+                                }
+                            }
+                        }
+                        "quit" => {
+                            daemon::graceful_shutdown();
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .build(app)?;
+
+            // --- Close-to-tray: hide window instead of quitting ---
+            if let Some(win) = app.get_webview_window("main") {
+                let win_clone = win.clone();
+                win.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = win_clone.hide();
+                    }
+                });
             }
 
             let handle = app.handle().clone();
