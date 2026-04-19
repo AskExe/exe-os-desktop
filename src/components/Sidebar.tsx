@@ -11,7 +11,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   { key: "office", label: "Office", icon: "desktop_windows" },
   { key: "work", label: "Work", icon: "work" },
-  { key: "wiki", label: "Wiki", icon: "menu_book" },
+  { key: "wiki", label: "Knowledge", icon: "menu_book" },
   { key: "crm", label: "CRM", icon: "contacts" },
   { key: "team", label: "Team", icon: "group" },
   { key: "settings", label: "Settings", icon: "settings" },

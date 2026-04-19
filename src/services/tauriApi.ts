@@ -156,6 +156,14 @@ export async function openWikiWindow(): Promise<void> {
   await invoke<void>("open_wiki_window");
 }
 
+/**
+ * Persist config updates to ~/.exe-os/config.json via Tauri IPC.
+ * Merges partial updates into the existing config (load → merge → save).
+ */
+export async function saveDesktopConfig(updates: Record<string, unknown>): Promise<void> {
+  await invoke<string>("save_config", { updates: JSON.stringify(updates) });
+}
+
 export interface DaemonStatusResult {
   running: boolean;
   port: number;

@@ -1,16 +1,41 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { daemonStatus } from "../services/tauriApi";
 import type { TabKey } from "./Sidebar";
 
 const TAB_TITLES: Record<TabKey, string> = {
   office: "Virtual Office",
   work: "Work Dashboard",
-  wiki: "Company Wiki",
+  wiki: "Knowledge Base",
   crm: "Exe CRM",
   team: "Team Roster",
   settings: "Settings",
 };
 
 export function TopBar({ activeTab }: { activeTab: TabKey }) {
+  const [live, setLive] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function check() {
+      try {
+        const s = await daemonStatus();
+        if (mounted) setLive(s.running);
+      } catch {
+        if (mounted) setLive(false);
+      }
+    }
+    check();
+    const id = setInterval(check, 10_000);
+    return () => { mounted = false; clearInterval(id); };
+  }, []);
+
+  const liveColor = live === null
+    ? "var(--outline)"
+    : live
+      ? "#4caf50"
+      : "var(--tertiary-dim)";
+  const liveLabel = live === null ? "CHECKING..." : live ? "LIVE" : "OFFLINE";
+
   return (
     <header
       style={{
@@ -50,11 +75,12 @@ export function TopBar({ activeTab }: { activeTab: TabKey }) {
             style={{
               width: 8,
               height: 8,
-              background: "var(--tertiary-dim)",
-              boxShadow: "0 0 8px rgba(255,180,168,0.6)",
+              borderRadius: "50%",
+              background: liveColor,
+              boxShadow: live ? "0 0 8px rgba(76,175,80,0.6)" : "none",
             }}
           />
-          <span id="live-status">LIVE: LOADING...</span>
+          <span>{liveLabel}</span>
         </div>
       </div>
 

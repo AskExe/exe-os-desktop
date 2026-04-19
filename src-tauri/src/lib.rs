@@ -130,6 +130,17 @@ import(dist + "/lib/store.js").then(s => s.initStore()).then(async () => {
 }).catch(e => { console.error(e); process.exit(1); });
 "#;
 
+const SAVE_CONFIG_SCRIPT: &str = r#"
+const dist = process.env.EXE_OS_DIST;
+const updates = JSON.parse(process.env.CONFIG_UPDATES);
+import(dist + "/lib/config.js").then(async m => {
+    const current = await m.loadConfig();
+    const merged = { ...current, ...updates };
+    await m.saveConfig(merged);
+    console.log(JSON.stringify({ ok: true }));
+}).catch(e => { console.error(e); process.exit(1); });
+"#;
+
 const LIST_PROVIDERS_SCRIPT: &str = r#"
 const dist = process.env.EXE_OS_DIST;
 import(dist + "/bin/list-providers.js").then(m => {
@@ -256,6 +267,15 @@ async fn open_crm_window(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn save_config(updates: String) -> Result<String, String> {
+    let dist = resolve_exe_os_dist()?;
+    run_node_script(
+        SAVE_CONFIG_SCRIPT,
+        &[("EXE_OS_DIST", &dist), ("CONFIG_UPDATES", &updates)],
+    )
+}
+
 /// Open the exe-wiki web app in a native OS webview window.
 ///
 /// Same isolation pattern as CRM — loaded by URL only, no bundling.
@@ -329,6 +349,7 @@ pub fn run() {
             recall_memory,
             query_graph,
             get_config,
+            save_config,
             check_license,
             open_crm_window,
             open_wiki_window,
