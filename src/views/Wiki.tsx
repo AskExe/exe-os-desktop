@@ -1,3 +1,12 @@
+/**
+ * Wiki view — dual-mode: Documents (exe-wiki WebviewWindow) and Graph (vis.js).
+ *
+ * Documents mode (default): launches exe-wiki in a native OS webview window,
+ * same pattern as CRM. URL from EXE_WIKI_URL env var.
+ *
+ * Graph mode: the existing vis.js knowledge graph explorer.
+ */
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Network } from "vis-network";
 import { DataSet } from "vis-data";
@@ -14,6 +23,7 @@ import {
   DEMO_WIKI_EDGES,
   DEMO_WIKI_MEMORIES,
 } from "../services/demoData.js";
+import { openWikiWindow } from "../services/tauriApi.js";
 
 // ---------------------------------------------------------------------------
 // Node type colors (Exe Foundry Bold)
@@ -28,6 +38,12 @@ const NODE_COLORS: Record<WikiNode["type"], string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Mode type
+// ---------------------------------------------------------------------------
+
+type WikiMode = "documents" | "graph";
+
+// ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
 
@@ -38,6 +54,89 @@ const s = {
     height: "100%",
     gap: 0,
   },
+  modeBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    padding: "8px 16px",
+    background: "var(--surface-container)",
+    gap: 4,
+  },
+  modeButton: (active: boolean) => ({
+    fontFamily: "var(--font-label)",
+    fontSize: 11,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase" as const,
+    padding: "6px 14px",
+    border: "none",
+    cursor: "pointer",
+    background: active ? "#F5D76E" : "transparent",
+    color: active ? "#0F0E1A" : "var(--outline)",
+    transition: "background 120ms, color 120ms",
+  }),
+  // Documents mode styles
+  docsContainer: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 24,
+    flex: 1,
+    padding: 40,
+  },
+  headline: {
+    fontFamily: "var(--font-headline)",
+    fontSize: 24,
+    fontWeight: 700,
+    color: "var(--on-surface)",
+    margin: 0,
+  },
+  description: {
+    fontFamily: "var(--font-body)",
+    fontSize: 14,
+    color: "var(--outline)",
+    lineHeight: 1.5,
+    maxWidth: 560,
+  },
+  launchRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
+    marginTop: 8,
+  },
+  launchButton: (isHover: boolean) => ({
+    fontFamily: "var(--font-label)",
+    fontSize: 12,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase" as const,
+    padding: "12px 20px",
+    border: "none",
+    cursor: "pointer",
+    background: isHover ? "#6B4C9A" : "#F5D76E",
+    color: isHover ? "#F5D76E" : "#0F0E1A",
+    transition: "background 120ms, color 120ms",
+  }),
+  errorBanner: {
+    fontFamily: "var(--font-body)",
+    fontSize: 12,
+    color: "#EF4444",
+    marginTop: 4,
+  },
+  notConfigured: {
+    fontFamily: "var(--font-body)",
+    fontSize: 13,
+    color: "var(--outline)",
+    padding: "12px 0",
+    lineHeight: 1.5,
+  },
+  envHint: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 12,
+    color: "var(--outline)",
+    background: "var(--surface-container)",
+    padding: "8px 12px",
+    display: "inline-block",
+    marginTop: 4,
+  },
+  // Graph mode styles
   main: {
     display: "flex",
     flex: 1,
@@ -191,10 +290,92 @@ const s = {
 };
 
 // ---------------------------------------------------------------------------
-// Component
+// SVG icons for the mode toggle
 // ---------------------------------------------------------------------------
 
-export function WikiView() {
+function DocIcon({ color }: { color: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
+function GraphIcon({ color }: { color: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="18" cy="18" r="3" />
+      <circle cx="18" cy="6" r="3" />
+      <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
+      <line x1="15.5" y1="7.5" x2="8.5" y2="7.5" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Documents mode sub-component
+// ---------------------------------------------------------------------------
+
+function DocumentsMode() {
+  const [isHover, setIsHover] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [notConfigured, setNotConfigured] = useState(false);
+
+  const onLaunch = async (): Promise<void> => {
+    try {
+      await openWikiWindow();
+      setLastError(null);
+      setNotConfigured(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("EXE_WIKI_URL not set")) {
+        setNotConfigured(true);
+        setLastError(null);
+      } else {
+        setLastError(msg);
+        setNotConfigured(false);
+      }
+    }
+  };
+
+  return (
+    <div style={s.docsContainer}>
+      <h1 style={s.headline}>Exe Wiki</h1>
+      <p style={s.description}>
+        Open the Exe Wiki in its own window. Workspace-scoped RAG chat for your
+        knowledge base, documents, and team context.
+      </p>
+      <div style={s.launchRow}>
+        <button
+          type="button"
+          style={s.launchButton(isHover)}
+          onMouseEnter={() => setIsHover(true)}
+          onMouseLeave={() => setIsHover(false)}
+          onClick={() => void onLaunch()}
+        >
+          Open Wiki
+        </button>
+      </div>
+      {notConfigured ? (
+        <div style={s.notConfigured}>
+          Wiki not configured. Set the environment variable to connect:
+          <div style={s.envHint}>EXE_WIKI_URL=http://localhost:3001</div>
+        </div>
+      ) : null}
+      {lastError ? <div style={s.errorBanner}>{lastError}</div> : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Graph mode sub-component (extracted from original WikiView)
+// ---------------------------------------------------------------------------
+
+function GraphMode() {
   const graphRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -304,7 +485,6 @@ export function WikiView() {
       if (result.memories.length > 0) {
         setNodeMemories(result.memories);
       } else {
-        // Fall back to demo memories for this node
         setNodeMemories(DEMO_WIKI_MEMORIES[selectedNode] ?? []);
       }
     });
@@ -320,7 +500,7 @@ export function WikiView() {
     }
   }, []);
 
-  // Chat handler — searches memories via service layer
+  // Chat handler
   const handleChat = useCallback(() => {
     const q = chatInput.trim();
     if (!q) return;
@@ -343,12 +523,11 @@ export function WikiView() {
     });
   }, [chatInput]);
 
-  // Get selected node data for the detail panel
   const nodeData = selectedNode ? nodes.find((n) => n.id === selectedNode) : null;
   const nodeEdges = selectedNode ? edges.filter((e) => e.from === selectedNode || e.to === selectedNode) : [];
 
   return (
-    <div style={s.container}>
+    <>
       <div style={s.main}>
         {/* WorkTree */}
         <div style={s.workTree}>
@@ -410,7 +589,6 @@ export function WikiView() {
                   {nodeEdges.map((e, i) => {
                     const target = e.from === selectedNode ? e.to : e.from;
                     const dir = e.from === selectedNode ? "\u2192" : "\u2190";
-                    // Resolve target label from nodes if possible
                     const targetNode = nodes.find((n) => n.id === target);
                     const targetLabel = targetNode ? targetNode.label : target;
                     return (
@@ -466,6 +644,41 @@ export function WikiView() {
         />
         <button style={s.chatButton} onClick={handleChat}>Send</button>
       </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main WikiView — mode toggle + render
+// ---------------------------------------------------------------------------
+
+export function WikiView() {
+  const [mode, setMode] = useState<WikiMode>("documents");
+
+  return (
+    <div style={s.container}>
+      {/* Mode toggle bar */}
+      <div style={s.modeBar}>
+        <button
+          type="button"
+          style={s.modeButton(mode === "documents")}
+          onClick={() => setMode("documents")}
+        >
+          <DocIcon color={mode === "documents" ? "#0F0E1A" : "var(--outline)"} />{" "}
+          Documents
+        </button>
+        <button
+          type="button"
+          style={s.modeButton(mode === "graph")}
+          onClick={() => setMode("graph")}
+        >
+          <GraphIcon color={mode === "graph" ? "#0F0E1A" : "var(--outline)"} />{" "}
+          Graph
+        </button>
+      </div>
+
+      {/* Active mode */}
+      {mode === "documents" ? <DocumentsMode /> : <GraphMode />}
     </div>
   );
 }

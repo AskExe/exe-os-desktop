@@ -146,6 +146,16 @@ export async function openCrmWindow(): Promise<void> {
   await invoke<void>("open_crm_window");
 }
 
+/**
+ * Launch the exe-wiki web app in a native OS WebviewWindow.
+ *
+ * Same isolation pattern as CRM — loaded by URL only, no bundling.
+ * Throws if EXE_WIKI_URL is not set.
+ */
+export async function openWikiWindow(): Promise<void> {
+  await invoke<void>("open_wiki_window");
+}
+
 export interface DaemonStatusResult {
   running: boolean;
   port: number;

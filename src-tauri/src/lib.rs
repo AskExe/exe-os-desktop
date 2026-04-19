@@ -256,6 +256,45 @@ async fn open_crm_window(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Open the exe-wiki web app in a native OS webview window.
+///
+/// Same isolation pattern as CRM — loaded by URL only, no bundling.
+/// URL from `EXE_WIKI_URL` env var; returns an error if not set.
+#[tauri::command]
+async fn open_wiki_window(app: tauri::AppHandle) -> Result<(), String> {
+    const WIKI_WINDOW_LABEL: &str = "wiki";
+    const WIKI_WINDOW_TITLE: &str = "Exe Wiki";
+
+    let url_str = std::env::var("EXE_WIKI_URL")
+        .map_err(|_| "EXE_WIKI_URL not set — configure it to connect to exe-wiki".to_string())?;
+    let url = url_str
+        .parse::<tauri::Url>()
+        .map_err(|e| format!("Invalid EXE_WIKI_URL '{}': {}", url_str, e))?;
+
+    if let Some(existing) = app.get_webview_window(WIKI_WINDOW_LABEL) {
+        return existing.set_focus().map_err(|e| e.to_string());
+    }
+
+    const WIKI_WINDOW_WIDTH: f64 = 1280.0;
+    const WIKI_WINDOW_HEIGHT: f64 = 800.0;
+    const WIKI_WINDOW_MIN_WIDTH: f64 = 900.0;
+    const WIKI_WINDOW_MIN_HEIGHT: f64 = 600.0;
+
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        WIKI_WINDOW_LABEL,
+        tauri::WebviewUrl::External(url),
+    )
+        .title(WIKI_WINDOW_TITLE)
+        .inner_size(WIKI_WINDOW_WIDTH, WIKI_WINDOW_HEIGHT)
+        .min_inner_size(WIKI_WINDOW_MIN_WIDTH, WIKI_WINDOW_MIN_HEIGHT)
+        .decorations(true)
+        .devtools(cfg!(debug_assertions))
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 async fn spawn_session(
     employee_name: String,
@@ -292,6 +331,7 @@ pub fn run() {
             get_config,
             check_license,
             open_crm_window,
+            open_wiki_window,
             spawn_session,
             daemon::start_daemon,
             daemon::stop_daemon,
