@@ -250,6 +250,7 @@ export interface AppConfig {
   searchMode: string;
   autoIngestion: boolean;
   autoRetrieval: boolean;
+  splashEffect: boolean;
   cloudSync: boolean;
   licenseKey: string;
   licenseStatus: string;
@@ -263,6 +264,7 @@ const DEFAULT_CONFIG: AppConfig = {
   searchMode: "hybrid",
   autoIngestion: true,
   autoRetrieval: true,
+  splashEffect: true,
   cloudSync: false,
   licenseKey: "EXE-PRO-•••••••••-4F2A",
   licenseStatus: "ACTIVE",
@@ -285,6 +287,7 @@ export async function fetchConfig(): Promise<ConfigResult> {
       searchMode: String(raw.searchMode ?? "hybrid"),
       autoIngestion: raw.autoIngestion !== false,
       autoRetrieval: raw.autoRetrieval !== false,
+      splashEffect: raw.splashEffect !== false,
       cloudSync: false,
       licenseKey: DEFAULT_CONFIG.licenseKey,
       licenseStatus: DEFAULT_CONFIG.licenseStatus,
@@ -306,6 +309,7 @@ export async function fetchConfig(): Promise<ConfigResult> {
         searchMode: String(raw.searchMode ?? "hybrid"),
         autoIngestion: raw.autoIngestion !== false,
         autoRetrieval: raw.autoRetrieval !== false,
+        splashEffect: raw.splashEffect !== false,
         cloudSync: !!cloud?.enabled,
         licenseKey: license?.key ? String(license.key) : DEFAULT_CONFIG.licenseKey,
         licenseStatus: license?.status ? String(license.status) : DEFAULT_CONFIG.licenseStatus,
@@ -320,6 +324,30 @@ export async function fetchConfig(): Promise<ConfigResult> {
 
   // 3. Fallback to demo defaults
   return { config: DEFAULT_CONFIG, isDemo: true };
+}
+
+// ---------------------------------------------------------------------------
+// Config — Save
+// ---------------------------------------------------------------------------
+
+export async function saveConfig(updates: Partial<AppConfig>): Promise<void> {
+  // 1. Try Tauri IPC
+  try {
+    await tauriApi.saveDesktopConfig(updates as Record<string, unknown>);
+    return;
+  } catch { /* Tauri not available */ }
+
+  // 2. Try Vite API middleware
+  try {
+    const res = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) return;
+  } catch { /* API not available */ }
+
+  // 3. Demo mode — no-op (toggles still work in-session)
 }
 
 // ---------------------------------------------------------------------------

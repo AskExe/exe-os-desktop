@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { fetchProviders, fetchConfig, type Provider, type AppConfig } from "../services/exeOsData.js";
+import React, { useState, useEffect, useCallback } from "react";
+import { fetchProviders, fetchConfig, saveConfig, type Provider, type AppConfig } from "../services/exeOsData.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -191,10 +191,15 @@ export function SettingsView() {
       setConfig(c);
       setAutoIngestion(c.autoIngestion);
       setAutoRetrieval(c.autoRetrieval);
+      setSplashEffect(c.splashEffect);
       setSearchMode(c.searchMode);
       setLicenseKey(c.licenseKey);
       setCloudSync(c.cloudSync);
     });
+  }, []);
+
+  const persist = useCallback((updates: Partial<AppConfig>) => {
+    saveConfig(updates).catch(() => {});
   }, []);
 
   return (
@@ -223,7 +228,7 @@ export function SettingsView() {
         <div style={s.sectionTitle}>Cloud Sync</div>
         <div style={s.card}>
           <div style={s.toggleRow}>
-            <div style={s.toggle(cloudSync)} onClick={() => setCloudSync(!cloudSync)}>
+            <div style={s.toggle(cloudSync)} onClick={() => { const v = !cloudSync; setCloudSync(v); persist({ cloudSync: v }); }}>
               <div style={s.toggleDot(cloudSync)} />
             </div>
             <span style={s.toggleLabel}>Enable cloud backup</span>
@@ -280,26 +285,26 @@ export function SettingsView() {
           <select
             style={{ ...s.input, cursor: "pointer" }}
             value={searchMode}
-            onChange={(e) => setSearchMode(e.target.value)}
+            onChange={(e) => { setSearchMode(e.target.value); persist({ searchMode: e.target.value }); }}
           >
             <option value="hybrid">Hybrid (vector + keywords)</option>
             <option value="fts">FTS (keywords only)</option>
           </select>
         </div>
         <div style={s.toggleRow}>
-          <div style={s.toggle(autoIngestion)} onClick={() => setAutoIngestion(!autoIngestion)}>
+          <div style={s.toggle(autoIngestion)} onClick={() => { const v = !autoIngestion; setAutoIngestion(v); persist({ autoIngestion: v }); }}>
             <div style={s.toggleDot(autoIngestion)} />
           </div>
           <span style={s.toggleLabel}>Auto-ingest tool outputs into memory</span>
         </div>
         <div style={s.toggleRow}>
-          <div style={s.toggle(autoRetrieval)} onClick={() => setAutoRetrieval(!autoRetrieval)}>
+          <div style={s.toggle(autoRetrieval)} onClick={() => { const v = !autoRetrieval; setAutoRetrieval(v); persist({ autoRetrieval: v }); }}>
             <div style={s.toggleDot(autoRetrieval)} />
           </div>
           <span style={s.toggleLabel}>Auto-inject relevant memories into context</span>
         </div>
         <div style={s.toggleRow}>
-          <div style={s.toggle(splashEffect)} onClick={() => setSplashEffect(!splashEffect)}>
+          <div style={s.toggle(splashEffect)} onClick={() => { const v = !splashEffect; setSplashEffect(v); persist({ splashEffect: v }); }}>
             <div style={s.toggleDot(splashEffect)} />
           </div>
           <span style={s.toggleLabel}>Show TTE splash animation on boot</span>
