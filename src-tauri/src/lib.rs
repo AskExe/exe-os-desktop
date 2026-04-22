@@ -1,6 +1,6 @@
 mod daemon;
 
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use tauri::Manager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -11,9 +11,22 @@ use tauri_plugin_updater::UpdaterExt;
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// Build a [`Command`] that runs `program` — on Windows, the command is
+/// forwarded into WSL2 (`wsl <program> <args…>`). On macOS / Linux the
+/// program is invoked directly.
+pub(crate) fn wsl_command(program: &str) -> Command {
+    if cfg!(target_os = "windows") {
+        let mut cmd = Command::new("wsl");
+        cmd.arg(program);
+        cmd
+    } else {
+        Command::new(program)
+    }
+}
+
 /// Resolve the exe-os dist directory from the global npm install.
 pub(crate) fn resolve_exe_os_dist() -> Result<String, String> {
-    let output = Command::new("npm")
+    let output = wsl_command("npm")
         .args(["root", "-g"])
         .output()
         .map_err(|e| format!("Failed to run npm: {}", e))?;
@@ -33,23 +46,42 @@ pub(crate) fn resolve_exe_os_dist() -> Result<String, String> {
 /// variables) and are read inside the script with `process.env.FOO`. This
 /// guarantees nothing user-controlled is ever parsed as JavaScript source.
 fn run_node_script(script: &'static str, env: &[(&str, &str)]) -> Result<String, String> {
-    let mut cmd = Command::new("node");
-    cmd.args(["--input-type=module", "-e", script]);
+    let mut cmd = wsl_command("node");
+    cmd.arg("--input-type=module");
+
     for (key, value) in env {
         cmd.env(key, value);
     }
 
-    let output = cmd
-        .output()
-        .map_err(|e| format!("Failed to spawn node: {}", e))?;
+    // On Windows, pipe the script via stdin to avoid argument-escaping
+    // issues across the WSL2 boundary. On Unix, pass it via -e directly.
+    let output = if cfg!(target_os = "windows") {
+        use std::io::Write;
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| format!("Failed to spawn node: {}", e))?;
+        if let Some(ref mut stdin) = child.stdin {
+            let _ = stdin.write_all(script.as_bytes());
+        }
+        drop(child.stdin.take());
+        child
+            .wait_with_output()
+            .map_err(|e| format!("Failed to wait for node: {}", e))?
+    } else {
+        cmd.args(["-e", script]);
+        cmd.output()
+            .map_err(|e| format!("Failed to spawn node: {}", e))?
+    };
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!("Node script failed: {}", stderr));
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    Ok(stdout)
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -334,6 +366,49 @@ async fn spawn_session(
     )
 }
 
+/// Check whether WSL2 is available (Windows only; always succeeds on Unix).
+/// Called by the frontend on startup to show a friendly setup guide.
+#[tauri::command]
+async fn check_wsl2() -> Result<String, String> {
+    if !cfg!(target_os = "windows") {
+        return Ok(r#"{"available":true,"platform":"unix"}"#.to_string());
+    }
+
+    Command::new("wsl")
+        .arg("--status")
+        .output()
+        .map_err(|_| {
+            "WSL2 is not installed. Run 'wsl --install' in PowerShell as \
+             Administrator, then restart your computer."
+                .to_string()
+        })
+        .and_then(|o| {
+            if o.status.success() {
+                Ok(())
+            } else {
+                Err("WSL2 is installed but not running properly. Run \
+                     'wsl --install' in PowerShell as Administrator."
+                    .to_string())
+            }
+        })?;
+
+    // Verify Node.js is reachable inside WSL2
+    let node_check = Command::new("wsl")
+        .args(["node", "--version"])
+        .output()
+        .map_err(|_| "Cannot reach Node.js inside WSL2.".to_string())?;
+
+    if !node_check.status.success() {
+        return Err(
+            "Node.js is not installed inside WSL2. \
+             See https://askexe.com/docs/install for setup instructions."
+                .to_string(),
+        );
+    }
+
+    Ok(r#"{"available":true,"platform":"windows-wsl2"}"#.to_string())
+}
+
 // ---------------------------------------------------------------------------
 // App setup
 // ---------------------------------------------------------------------------
@@ -357,6 +432,7 @@ pub fn run() {
             daemon::start_daemon,
             daemon::stop_daemon,
             daemon::daemon_status,
+            check_wsl2,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

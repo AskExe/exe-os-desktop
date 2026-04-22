@@ -38,7 +38,9 @@ static DAEMON: Mutex<Option<DaemonProcess>> = Mutex::new(None);
 // ---------------------------------------------------------------------------
 
 fn pid_file_path() -> Result<std::path::PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|_| "HOME not set".to_string())?;
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map_err(|_| "HOME/USERPROFILE not set".to_string())?;
     Ok(std::path::PathBuf::from(home)
         .join(".exe-os")
         .join("session-cache")
@@ -65,21 +67,46 @@ fn remove_pid_file() {
 // ---------------------------------------------------------------------------
 
 fn is_process_alive(pid: u32) -> bool {
-    Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    if cfg!(target_os = "windows") {
+        // PID is a Windows process (wsl.exe); check via tasklist
+        Command::new("tasklist")
+            .args(["/fi", &format!("PID eq {pid}"), "/nh"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()))
+            .unwrap_or(false)
+    } else {
+        Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
 }
 
 fn send_signal(pid: u32, signal: &str) {
-    let _ = Command::new("kill")
-        .args([signal, &pid.to_string()])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
+    if cfg!(target_os = "windows") {
+        // Map Unix signals to taskkill flags (/f = forceful for SIGKILL)
+        let pid_str = pid.to_string();
+        let mut args = vec!["/pid", &pid_str, "/t"];
+        if signal == "-9" || signal == "-KILL" {
+            args.push("/f");
+        }
+        let _ = Command::new("taskkill")
+            .args(&args)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    } else {
+        let _ = Command::new("kill")
+            .args([signal, &pid.to_string()])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
 }
 
 /// Wait for a child to exit, escalating from SIGTERM to SIGKILL after timeout.
@@ -123,11 +150,17 @@ pub async fn start_daemon() -> Result<DaemonStatus, String> {
     let dist = crate::resolve_exe_os_dist()?;
     let script = format!("{dist}/lib/exe-daemon.js");
 
-    // Prepend common Node install paths — Finder-launched apps get a minimal PATH
+    // Prepend common Node install paths — Finder/Explorer-launched apps get a minimal PATH
     let path = std::env::var("PATH").unwrap_or_default();
-    let enhanced_path = format!("/opt/homebrew/bin:/usr/local/bin:{path}");
+    let enhanced_path = if cfg!(target_os = "windows") {
+        // WSL2 paths for Node.js
+        format!("/usr/local/bin:/usr/bin:{path}")
+    } else {
+        // macOS Homebrew paths
+        format!("/opt/homebrew/bin:/usr/local/bin:{path}")
+    };
 
-    let mut child = Command::new("node")
+    let mut child = crate::wsl_command("node")
         .arg(&script)
         .env("PATH", &enhanced_path)
         .stdout(Stdio::null())

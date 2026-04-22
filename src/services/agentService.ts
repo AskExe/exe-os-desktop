@@ -48,6 +48,7 @@ class AgentServiceImpl {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectDelay = RECONNECT_BASE_MS;
   private intentionalClose = false;
+  private connectedUrl: string | null = null;
   private pendingSessionStart: {
     resolve: (sessionId: string) => void;
     reject: (err: Error) => void;
@@ -70,6 +71,7 @@ class AgentServiceImpl {
   /** Cleanly close the connection (no auto-reconnect). */
   disconnect(): void {
     this.intentionalClose = true;
+    this.connectedUrl = null;
     this.clearReconnect();
     if (this.ws) {
       this.ws.close();
@@ -153,14 +155,28 @@ class AgentServiceImpl {
   // -------------------------------------------------------------------------
 
   private doConnect(): Promise<void> {
+    // Reconnect to the last successful URL when possible
+    if (this.connectedUrl) {
+      return this.attemptConnect(this.connectedUrl).catch(() => {
+        this.connectedUrl = null;
+        return this.doConnect();
+      });
+    }
+    // Primary; fall back to 127.0.0.1 for WSL2 cross-boundary compat
+    return this.attemptConnect(`ws://localhost:${this.port}`).catch(() =>
+      this.attemptConnect(`ws://127.0.0.1:${this.port}`),
+    );
+  }
+
+  private attemptConnect(url: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const url = `ws://localhost:${this.port}`;
       const ws = new WebSocket(url);
-      let settled = false;
+      let opened = false;
 
       ws.addEventListener("open", () => {
-        settled = true;
+        opened = true;
         this.ws = ws;
+        this.connectedUrl = url;
         this.reconnectDelay = RECONNECT_BASE_MS;
         resolve();
       });
@@ -170,16 +186,17 @@ class AgentServiceImpl {
       });
 
       ws.addEventListener("close", () => {
-        this.ws = null;
-        if (!this.intentionalClose) {
-          this.scheduleReconnect();
+        if (opened) {
+          this.ws = null;
+          if (!this.intentionalClose) {
+            this.scheduleReconnect();
+          }
         }
       });
 
       ws.addEventListener("error", () => {
-        if (!settled) {
-          settled = true;
-          reject(new Error(`WebSocket connection failed on port ${this.port}`));
+        if (!opened) {
+          reject(new Error(`WebSocket connection failed: ${url}`));
         }
       });
     });
