@@ -11,18 +11,40 @@ interface OfficeEmployee {
   status: "active" | "working" | "idle" | "offline";
 }
 
+interface OfficeFrameMessage {
+  source?: string;
+  type?: string;
+  id?: number;
+  name?: string;
+}
+
+export interface OfficeAgentFocus {
+  id: number;
+  name?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VIRTUAL_OFFICE_SRC = "/virtual-office/index.html";
+const HOST_BRIDGE_SOURCE = "exe-virtual-office";
+const VIRTUAL_OFFICE_SRC =
+  import.meta.env.VITE_VIRTUAL_OFFICE_URL || "/virtual-office/index.html";
+const OFFICE_ORIGIN = (() => {
+  if (typeof window === "undefined") return "null";
+  try {
+    return new URL(VIRTUAL_OFFICE_SRC, window.location.href).origin;
+  } catch {
+    return window.location.origin;
+  }
+})();
 
 const THEMES = [
-  { id: "midnight-hq", label: "Midnight HQ" },
-  { id: "neon-terminal", label: "Neon Terminal" },
-  { id: "lofi-study", label: "Lo-fi Study" },
-  { id: "orbital-station", label: "Orbital Station" },
-  { id: "zen-garden", label: "Zen Garden" },
+  { id: "midnight-hq", label: "Mission Control" },
+  { id: "neon-terminal", label: "Signal Room" },
+  { id: "lofi-study", label: "Briefing Deck" },
+  { id: "orbital-station", label: "Night Shift" },
+  { id: "zen-garden", label: "Observatory" },
 ] as const;
 
 const DEFAULT_THEME = "midnight-hq";
@@ -46,7 +68,7 @@ function sendToFrame(
   iframe: HTMLIFrameElement | null,
   msg: Record<string, unknown>,
 ): void {
-  iframe?.contentWindow?.postMessage(msg, "*");
+  iframe?.contentWindow?.postMessage(msg, OFFICE_ORIGIN);
 }
 
 function sendTheme(iframe: HTMLIFrameElement | null, themeId: string): void {
@@ -127,7 +149,11 @@ const s = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function OfficeView() {
+interface OfficeViewProps {
+  onFocusAgent?: (agent: OfficeAgentFocus) => void;
+}
+
+export function OfficeView({ onFocusAgent }: OfficeViewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
   const [loaded, setLoaded] = useState(false);
@@ -149,21 +175,59 @@ export function OfficeView() {
     refreshEmployees();
   }, [refreshEmployees]);
 
-  /** Called once the iframe has loaded — push initial state. */
-  const handleLoad = useCallback(() => {
-    setLoaded(true);
-    setError(false);
+  /** Push current desktop state into the embedded office. */
+  const syncFrameState = useCallback(() => {
     const frame = iframeRef.current;
     sendTheme(frame, themeId);
     sendEmployees(frame, employees);
     sendStatuses(frame, employees);
   }, [themeId, employees]);
 
+  /** Called once the iframe element has loaded. */
+  const handleLoad = useCallback(() => {
+    setLoaded(true);
+    setError(false);
+    syncFrameState();
+  }, [syncFrameState]);
+
   /** Handle iframe load error. */
   const handleError = useCallback(() => {
     setError(true);
     setLoaded(false);
   }, []);
+
+  /** Handle lifecycle and click messages from the embedded office. */
+  const handleFrameMessage = useCallback(
+    (event: MessageEvent) => {
+      if (event.source !== iframeRef.current?.contentWindow) return;
+      if (event.origin !== OFFICE_ORIGIN) return;
+      const msg = event.data as OfficeFrameMessage | null;
+      if (!msg || typeof msg.type !== "string") {
+        return;
+      }
+      if (typeof msg.source === "string" && msg.source !== HOST_BRIDGE_SOURCE) {
+        return;
+      }
+      if (msg.type === "webviewReady") {
+        setLoaded(true);
+        setError(false);
+        syncFrameState();
+        return;
+      }
+      if (msg.type === "focusAgent" && typeof msg.id === "number") {
+        onFocusAgent?.({
+          id: msg.id,
+          name: typeof msg.name === "string" ? msg.name : undefined,
+        });
+      }
+    },
+    [onFocusAgent, syncFrameState],
+  );
+
+  useEffect(() => {
+    window.addEventListener("message", handleFrameMessage);
+    return () => window.removeEventListener("message", handleFrameMessage);
+  }, [handleFrameMessage]);
 
   /** Theme change — propagate to iframe immediately. */
   const handleThemeChange = useCallback(
@@ -178,10 +242,8 @@ export function OfficeView() {
   /** Push updated employees to iframe whenever they change. */
   useEffect(() => {
     if (!loaded) return;
-    const frame = iframeRef.current;
-    sendEmployees(frame, employees);
-    sendStatuses(frame, employees);
-  }, [loaded, employees]);
+    syncFrameState();
+  }, [loaded, syncFrameState]);
 
   /** Periodically refresh employee statuses from exe-os. */
   useEffect(() => {
@@ -205,7 +267,7 @@ export function OfficeView() {
 
       {error ? (
         <div style={s.fallback}>
-          Virtual office assets not found. Run pixel-agents build first.
+          Virtual office assets not found. Sync the exe-virtual-office build first.
         </div>
       ) : (
         <iframe

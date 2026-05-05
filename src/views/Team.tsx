@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { fetchEmployees, type Employee } from "../services/exeOsData.js";
 
 // ---------------------------------------------------------------------------

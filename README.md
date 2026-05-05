@@ -57,12 +57,23 @@ cargo install tauri-cli  # Tauri CLI
 # Install
 npm install
 
-# Dev
+# Desktop dev
 npm run tauri dev
 
-# Build
+# Build desktop
 npm run tauri build
 ```
+
+### Virtual Office source of truth
+
+The virtual office now lives in the sibling repo at
+`../exe-virtual-office`.
+
+- Dev: start the office webview in that repo and point the desktop shell at it with `VITE_VIRTUAL_OFFICE_URL=http://127.0.0.1:5173`
+- Bundle sync: after building `../exe-virtual-office/webview-ui`, run `npm run virtual-office:sync` here to copy `dist/webview` into `public/virtual-office`
+
+The desktop app defaults back to the bundled `/virtual-office/index.html`
+when no dev URL is configured.
 
 ## Status
 

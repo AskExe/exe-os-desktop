@@ -60,9 +60,10 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  headline: "'Epilogue', sans-serif",
-  body: "'Manrope', sans-serif",
-  label: "'Space Grotesk', sans-serif",
+  headline: "var(--font-headline)",
+  body: "var(--font-body)",
+  label: "var(--font-label)",
+  mono: "var(--font-mono)",
 } as const;
 
 export const spacing = {

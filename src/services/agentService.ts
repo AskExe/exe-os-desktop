@@ -53,6 +53,10 @@ class AgentServiceImpl {
     resolve: (sessionId: string) => void;
     reject: (err: Error) => void;
   } | null = null;
+  private pendingSessionConfig: {
+    agentId: string;
+    model: string;
+  } | null = null;
 
   // -------------------------------------------------------------------------
   // Public API
@@ -96,6 +100,10 @@ class AgentServiceImpl {
         return;
       }
       this.pendingSessionStart = { resolve, reject };
+      this.pendingSessionConfig = {
+        agentId: config.agentId,
+        model: config.model,
+      };
       this.send({ type: "start_session", ...config });
     });
   }
@@ -178,6 +186,7 @@ class AgentServiceImpl {
         this.ws = ws;
         this.connectedUrl = url;
         this.reconnectDelay = RECONNECT_BASE_MS;
+        this.send({ type: "list_sessions" });
         resolve();
       });
 
@@ -242,15 +251,19 @@ class AgentServiceImpl {
 
       case "session_started":
         if (this.pendingSessionStart) {
+          const startedAt = new Date().toISOString();
+          const config = this.pendingSessionConfig;
           this.sessions.set(msg.sessionId, {
             sessionId: msg.sessionId,
-            agentId: "",
-            model: "",
-            startedAt: new Date().toISOString(),
+            agentId: config?.agentId ?? "",
+            model: config?.model ?? "",
+            startedAt,
             status: "running",
           });
           this.pendingSessionStart.resolve(msg.sessionId);
           this.pendingSessionStart = null;
+          this.pendingSessionConfig = null;
+          this.send({ type: "list_sessions" });
         }
         break;
 
@@ -269,6 +282,7 @@ class AgentServiceImpl {
           this.pendingSessionStart.reject(new Error(msg.message));
           this.pendingSessionStart = null;
         }
+        this.pendingSessionConfig = null;
         break;
     }
   }

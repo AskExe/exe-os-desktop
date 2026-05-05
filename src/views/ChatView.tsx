@@ -450,7 +450,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
         .chat-md p { margin: 0 0 8px; }
         .chat-md p:last-child { margin-bottom: 0; }
         .chat-md h1, .chat-md h2, .chat-md h3 {
-          font-family: Epilogue, sans-serif;
+          font: inherit;
+          font-family: var(--font-headline);
           color: #fff4dc;
           margin: 12px 0 6px;
           letter-spacing: -0.02em;
@@ -462,7 +463,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
           background: ${CODE_BG};
           border: 1px solid ${CODE_BORDER};
           padding: 2px 6px;
-          font-family: "Space Grotesk", monospace;
+          font: inherit;
+          font-family: var(--font-label);
           font-size: 12px;
           color: ${GOLD};
         }
@@ -573,7 +575,7 @@ const emptyStateStyle: React.CSSProperties = {
 
 const roleLabelStyle: React.CSSProperties = {
   fontSize: 10,
-  fontFamily: "Manrope, sans-serif",
+  fontFamily: "var(--font-body)",
   textTransform: "uppercase",
   letterSpacing: "0.08em",
   fontWeight: 600,
@@ -583,7 +585,7 @@ const roleLabelStyle: React.CSSProperties = {
 const bubbleBase: React.CSSProperties = {
   maxWidth: "85%",
   padding: "10px 14px",
-  fontFamily: "Epilogue, sans-serif",
+  fontFamily: "var(--font-headline)",
   wordBreak: "break-word",
 };
 
@@ -619,13 +621,13 @@ const toolHeaderStyle: React.CSSProperties = {
   border: "none",
   color: TEXT_COLOR,
   cursor: "pointer",
-  fontFamily: "Manrope, sans-serif",
+  fontFamily: "var(--font-body)",
   fontSize: 12,
   textAlign: "left",
 };
 
 const toolNameStyle: React.CSSProperties = {
-  fontFamily: "'Space Grotesk', monospace",
+  fontFamily: "var(--font-label)",
   fontWeight: 600,
   color: GOLD,
   fontSize: 12,
@@ -638,7 +640,7 @@ const toolBodyStyle: React.CSSProperties = {
 };
 
 const toolResultStyle: React.CSSProperties = {
-  fontFamily: "'Space Grotesk', monospace",
+  fontFamily: "var(--font-label)",
   fontSize: 11,
   color: TEXT_DIM,
   lineHeight: 1.5,
@@ -679,7 +681,7 @@ const inputFieldStyle: React.CSSProperties = {
   color: TEXT_COLOR,
   padding: "10px 14px",
   fontSize: 14,
-  fontFamily: "Epilogue, sans-serif",
+  fontFamily: "var(--font-headline)",
   outline: "none",
   lineHeight: 1.5,
   minHeight: 40,
@@ -692,7 +694,7 @@ const sendBtnStyle: React.CSSProperties = {
   border: "none",
   padding: "10px 20px",
   fontSize: 12,
-  fontFamily: "Manrope, sans-serif",
+  fontFamily: "var(--font-body)",
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.06em",

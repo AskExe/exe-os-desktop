@@ -1,5 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ChatView } from "./components/ChatView";
+import { useCallback, useMemo, useState } from "react";
 import { Sidebar, type TabKey } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { OfficeView } from "./views/Office";
@@ -9,44 +8,41 @@ import CRM from "./views/CRM";
 import { TeamView } from "./views/Team";
 import { SettingsView } from "./views/Settings";
 
-const CHAT_PANEL_WIDTH = 420;
-
-const views: Record<TabKey, React.FC> = {
-  office: OfficeView,
-  work: WorkView,
-  wiki: WikiView,
-  crm: CRM,
-  team: TeamView,
-  settings: SettingsView,
-};
+interface WorkChatRequest {
+  employeeName?: string;
+  nonce: number;
+}
 
 export function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("office");
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatTarget, setChatTarget] = useState<string | undefined>(undefined);
-  const View = views[activeTab];
+  const [workChatRequest, setWorkChatRequest] = useState<WorkChatRequest | null>(null);
 
-  const openChat = useCallback((employeeName?: string) => {
-    setChatTarget(employeeName);
-    setChatOpen(true);
+  const handleFocusAgent = useCallback((agent: { name?: string }) => {
+    setWorkChatRequest({
+      employeeName: agent.name,
+      nonce: Date.now(),
+    });
+    setActiveTab("work");
   }, []);
 
-  const closeChat = useCallback(() => {
-    setChatOpen(false);
-  }, []);
-
-  // 'c' key toggles chat panel
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "c" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        setChatOpen((prev) => !prev);
-      }
+  const view = useMemo(() => {
+    switch (activeTab) {
+      case "office":
+        return <OfficeView onFocusAgent={handleFocusAgent} />;
+      case "work":
+        return <WorkView chatRequest={workChatRequest} />;
+      case "wiki":
+        return <WikiView />;
+      case "crm":
+        return <CRM />;
+      case "team":
+        return <TeamView />;
+      case "settings":
+        return <SettingsView />;
+      default:
+        return null;
     }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [activeTab, handleFocusAgent, workChatRequest]);
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
@@ -57,8 +53,6 @@ export function App() {
           display: "flex",
           flexDirection: "column",
           marginLeft: 200,
-          marginRight: chatOpen ? CHAT_PANEL_WIDTH : 0,
-          transition: "margin-right 0.2s ease",
         }}
       >
         <TopBar activeTab={activeTab} />
@@ -71,24 +65,8 @@ export function App() {
             background: "var(--bg)",
           }}
         >
-          <View />
+          {view}
         </main>
-      </div>
-
-      {/* Chat slide-over panel */}
-      <div
-        style={{
-          position: "fixed",
-          right: chatOpen ? 0 : -CHAT_PANEL_WIDTH,
-          top: 0,
-          width: CHAT_PANEL_WIDTH,
-          height: "100vh",
-          transition: "right 0.2s ease",
-          zIndex: 50,
-          borderLeft: "1px solid var(--outline-variant)",
-        }}
-      >
-        {chatOpen && <ChatView employeeName={chatTarget} onClose={closeChat} />}
       </div>
     </div>
   );

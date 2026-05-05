@@ -144,9 +144,15 @@ export const CODE_BLOCK_PADDING_Y = 8;
 // Font constants — Exe Foundry Bold
 // ---------------------------------------------------------------------------
 
-const BODY_FAMILY = "Manrope, sans-serif";
-const HEADING_FAMILY = "Epilogue, sans-serif";
-const CODE_FAMILY = '"Space Grotesk", sans-serif';
+function getFontFamily(cssVarName: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(cssVarName).trim();
+  return value || fallback;
+}
+
+const BODY_FAMILY = getFontFamily("--font-body", "Manrope, sans-serif");
+const HEADING_FAMILY = getFontFamily("--font-headline", "Epilogue, sans-serif");
+const CODE_FAMILY = getFontFamily("--font-label", '"Space Grotesk", sans-serif');
 const INLINE_CODE_FONT = `600 12px ${CODE_FAMILY}`;
 const INLINE_CODE_EXTRA_WIDTH = 12;
 const IMAGE_FONT = `700 11px ${BODY_FAMILY}`;

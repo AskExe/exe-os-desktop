@@ -9,7 +9,7 @@
  * distribution story.
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { openCrmWindow } from "../services/tauriApi.js";
 
 const DEFAULT_CRM_URL = "https://crm.askexe.com";
@@ -67,7 +67,7 @@ const s = {
   },
 };
 
-export default function CRM(): React.ReactElement {
+export default function CRM() {
   const [isHover, setIsHover] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 

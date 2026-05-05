@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchProviders, fetchConfig, saveConfig, type Provider, type AppConfig } from "../services/exeOsData.js";
 
 // ---------------------------------------------------------------------------
