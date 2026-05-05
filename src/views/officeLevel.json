@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "Mission Control Floor",
   "renderMode": "hd-plate",
   "canvas": {
@@ -16,49 +16,96 @@
     "gridEndX": 98,
     "gridStartY": 31,
     "gridEndY": 96,
-    "gridStep": 2.6,
-    "obstacleClearance": 1.75
+    "gridStep": 1.6,
+    "obstacleClearance": 2.2
   },
   "walkableZones": [
     {
-      "id": "main-floor",
+      "id": "north-aisle",
       "points": [
-        { "x": 0, "y": 55 },
-        { "x": 14, "y": 45 },
-        { "x": 33, "y": 40 },
-        { "x": 48, "y": 28 },
-        { "x": 74, "y": 31 },
-        { "x": 100, "y": 43 },
-        { "x": 100, "y": 92 },
-        { "x": 88, "y": 100 },
-        { "x": 19, "y": 100 },
-        { "x": 0, "y": 84 }
+        { "x": 16, "y": 52 },
+        { "x": 28, "y": 46 },
+        { "x": 39, "y": 40 },
+        { "x": 50, "y": 31 },
+        { "x": 73, "y": 33 },
+        { "x": 89, "y": 41 },
+        { "x": 82, "y": 49 },
+        { "x": 58, "y": 49 },
+        { "x": 44, "y": 45 },
+        { "x": 30, "y": 51 }
       ]
     },
     {
-      "id": "upper-operations-deck",
+      "id": "west-center-aisle",
       "points": [
-        { "x": 31, "y": 30 },
-        { "x": 49, "y": 26 },
-        { "x": 74, "y": 30 },
-        { "x": 88, "y": 39 },
-        { "x": 76, "y": 50 },
-        { "x": 55, "y": 50 },
-        { "x": 42, "y": 43 }
+        { "x": 0, "y": 56 },
+        { "x": 13, "y": 49 },
+        { "x": 31, "y": 50 },
+        { "x": 42, "y": 58 },
+        { "x": 35, "y": 68 },
+        { "x": 18, "y": 76 },
+        { "x": 0, "y": 85 }
+      ]
+    },
+    {
+      "id": "central-ring",
+      "points": [
+        { "x": 32, "y": 60 },
+        { "x": 44, "y": 53 },
+        { "x": 60, "y": 50 },
+        { "x": 78, "y": 53 },
+        { "x": 88, "y": 60 },
+        { "x": 76, "y": 72 },
+        { "x": 62, "y": 84 },
+        { "x": 42, "y": 77 }
+      ]
+    },
+    {
+      "id": "south-main-aisle",
+      "points": [
+        { "x": 18, "y": 74 },
+        { "x": 35, "y": 66 },
+        { "x": 51, "y": 72 },
+        { "x": 68, "y": 89 },
+        { "x": 56, "y": 100 },
+        { "x": 23, "y": 100 },
+        { "x": 4, "y": 88 }
+      ]
+    },
+    {
+      "id": "east-ring",
+      "points": [
+        { "x": 77, "y": 51 },
+        { "x": 99, "y": 48 },
+        { "x": 100, "y": 66 },
+        { "x": 90, "y": 76 },
+        { "x": 76, "y": 71 },
+        { "x": 71, "y": 61 }
+      ]
+    },
+    {
+      "id": "holo-front-aisle",
+      "points": [
+        { "x": 64, "y": 78 },
+        { "x": 79, "y": 72 },
+        { "x": 100, "y": 82 },
+        { "x": 96, "y": 95 },
+        { "x": 75, "y": 100 },
+        { "x": 58, "y": 92 }
       ]
     }
   ],
   "patrolAnchors": {
-    "westUpper": { "x": 31, "y": 53 },
-    "centerNorth": { "x": 58, "y": 43 },
-    "eastUpper": { "x": 75, "y": 48 },
-    "westSouth": { "x": 24.8, "y": 72.6 },
-    "southCenter": { "x": 40.4, "y": 64.8 },
-    "southEast": { "x": 72, "y": 76 },
-    "holoNorth": { "x": 79.4, "y": 51.8 },
-    "holoSouth": { "x": 74.2, "y": 77.8 },
-    "bottomWest": { "x": 24.8, "y": 77.8 },
-    "bottomCenter": { "x": 56, "y": 90.8 }
+    "westUpper": { "x": 30.5, "y": 52.5 },
+    "centerNorth": { "x": 58.5, "y": 43.5 },
+    "eastUpper": { "x": 77.5, "y": 49.5 },
+    "westSouth": { "x": 21.5, "y": 76.5 },
+    "southCenter": { "x": 39.5, "y": 68 },
+    "southEast": { "x": 70.5, "y": 79.5 },
+    "holoNorth": { "x": 76.5, "y": 53.5 },
+    "holoSouth": { "x": 73.5, "y": 79.5 },
+    "bottomWest": { "x": 28.5, "y": 82 },
+    "bottomCenter": { "x": 55, "y": 92 }
   },
   "defaultPatrolAnchorIds": ["westUpper", "centerNorth", "southCenter", "bottomCenter"],
   "patrolRouteAnchors": {
@@ -145,21 +192,22 @@
       "sourceAssetId": "OPS_CONSOLE_FRONT",
       "anchor": { "x": 35, "y": 43 },
       "footprint": [
-        { "x": 24, "y": 34 },
-        { "x": 46.5, "y": 32 },
-        { "x": 48, "y": 48.5 },
-        { "x": 26.5, "y": 52.5 }
+        { "x": 23, "y": 34 },
+        { "x": 44, "y": 29 },
+        { "x": 50, "y": 39 },
+        { "x": 44, "y": 49 },
+        { "x": 25, "y": 45 }
       ],
       "occlusionFootprint": [
-        { "x": 24.5, "y": 43 },
-        { "x": 48.5, "y": 43 },
-        { "x": 48.2, "y": 52.5 },
-        { "x": 26.5, "y": 55 }
+        { "x": 23, "y": 38 },
+        { "x": 50, "y": 40 },
+        { "x": 44, "y": 49 },
+        { "x": 26, "y": 47 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 52
+      "zLayer": 46
     },
     {
       "id": "center-analyst-island",
@@ -167,21 +215,22 @@
       "sourceAssetId": "OPS_CONSOLE_FRONT",
       "anchor": { "x": 44, "y": 52 },
       "footprint": [
-        { "x": 35, "y": 43 },
-        { "x": 53, "y": 40 },
-        { "x": 55, "y": 56 },
-        { "x": 38, "y": 61 }
+        { "x": 35, "y": 39 },
+        { "x": 51, "y": 34 },
+        { "x": 55, "y": 44 },
+        { "x": 47, "y": 54 },
+        { "x": 36, "y": 51 }
       ],
       "occlusionFootprint": [
-        { "x": 35.5, "y": 50 },
-        { "x": 55.2, "y": 50 },
-        { "x": 55, "y": 60 },
-        { "x": 38, "y": 63 }
+        { "x": 35, "y": 45 },
+        { "x": 55, "y": 44 },
+        { "x": 52, "y": 54 },
+        { "x": 38, "y": 56 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 60
+      "zLayer": 52
     },
     {
       "id": "east-command-desk",
@@ -189,21 +238,22 @@
       "sourceAssetId": "DESK_FRONT",
       "anchor": { "x": 88, "y": 46 },
       "footprint": [
-        { "x": 78.5, "y": 35 },
+        { "x": 72, "y": 36 },
+        { "x": 88, "y": 31.5 },
         { "x": 96, "y": 39 },
-        { "x": 97.5, "y": 52.5 },
-        { "x": 82, "y": 56 }
+        { "x": 92, "y": 50 },
+        { "x": 75, "y": 47 }
       ],
       "occlusionFootprint": [
-        { "x": 80, "y": 45 },
-        { "x": 97, "y": 47 },
-        { "x": 97.5, "y": 56 },
-        { "x": 82, "y": 58 }
+        { "x": 73, "y": 43 },
+        { "x": 96, "y": 43 },
+        { "x": 92, "y": 51 },
+        { "x": 75, "y": 49 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 56
+      "zLayer": 48
     },
     {
       "id": "east-garden-desk",
@@ -211,21 +261,22 @@
       "sourceAssetId": "DESK_FRONT",
       "anchor": { "x": 95, "y": 56 },
       "footprint": [
-        { "x": 91, "y": 45 },
-        { "x": 100, "y": 49 },
-        { "x": 100, "y": 62 },
-        { "x": 91, "y": 59 }
+        { "x": 88, "y": 43 },
+        { "x": 100, "y": 42 },
+        { "x": 100, "y": 58 },
+        { "x": 89, "y": 60 },
+        { "x": 84, "y": 52 }
       ],
       "occlusionFootprint": [
-        { "x": 91, "y": 54 },
-        { "x": 100, "y": 56 },
-        { "x": 100, "y": 64 },
-        { "x": 91, "y": 62 }
+        { "x": 86, "y": 53 },
+        { "x": 100, "y": 54 },
+        { "x": 100, "y": 63 },
+        { "x": 89, "y": 62 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 62
+      "zLayer": 58
     },
     {
       "id": "west-support-console",
@@ -233,21 +284,21 @@
       "sourceAssetId": "OPS_CONSOLE_FRONT",
       "anchor": { "x": 21, "y": 64 },
       "footprint": [
-        { "x": 10, "y": 56 },
-        { "x": 29, "y": 52 },
-        { "x": 33, "y": 66.5 },
-        { "x": 13, "y": 72.5 }
+        { "x": 10.5, "y": 57 },
+        { "x": 29.5, "y": 52.5 },
+        { "x": 33, "y": 65 },
+        { "x": 13.5, "y": 71 }
       ],
       "occlusionFootprint": [
         { "x": 11, "y": 62 },
         { "x": 33, "y": 62 },
-        { "x": 33, "y": 72.5 },
-        { "x": 13, "y": 75 }
+        { "x": 33, "y": 71 },
+        { "x": 13, "y": 73 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 72
+      "zLayer": 69
     },
     {
       "id": "west-front-plant-rail",
@@ -277,23 +328,23 @@
       "sourceAssetId": "BRIEFING_TABLE",
       "anchor": { "x": 61, "y": 67 },
       "footprint": [
-        { "x": 46.5, "y": 54 },
-        { "x": 70.5, "y": 48 },
-        { "x": 82, "y": 65 },
-        { "x": 58, "y": 80 },
-        { "x": 41.5, "y": 68 }
+        { "x": 43.5, "y": 52.5 },
+        { "x": 61.5, "y": 44.8 },
+        { "x": 74.5, "y": 54.5 },
+        { "x": 67.5, "y": 68.5 },
+        { "x": 48.5, "y": 64.5 }
       ],
       "occlusionFootprint": [
-        { "x": 42, "y": 66 },
-        { "x": 82, "y": 64 },
-        { "x": 76, "y": 78 },
-        { "x": 56, "y": 84 },
-        { "x": 42, "y": 72 }
+        { "x": 44, "y": 58 },
+        { "x": 74, "y": 56 },
+        { "x": 70, "y": 68.5 },
+        { "x": 55, "y": 72 },
+        { "x": 44, "y": 64 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 80
+      "zLayer": 66
     },
     {
       "id": "hologram-platform",
@@ -301,23 +352,24 @@
       "sourceAssetId": "HOLOGRAM_PLATFORM",
       "anchor": { "x": 86, "y": 72 },
       "footprint": [
-        { "x": 79, "y": 55 },
-        { "x": 100, "y": 55 },
-        { "x": 100, "y": 79 },
-        { "x": 88, "y": 87 },
-        { "x": 75, "y": 73 }
+        { "x": 69, "y": 55 },
+        { "x": 91, "y": 51 },
+        { "x": 100, "y": 61 },
+        { "x": 98, "y": 77 },
+        { "x": 85, "y": 85 },
+        { "x": 69, "y": 72 }
       ],
       "occlusionFootprint": [
-        { "x": 76, "y": 70 },
-        { "x": 100, "y": 69 },
-        { "x": 100, "y": 85 },
-        { "x": 88, "y": 90 },
-        { "x": 76, "y": 78 }
+        { "x": 68, "y": 67 },
+        { "x": 100, "y": 66 },
+        { "x": 100, "y": 82 },
+        { "x": 86, "y": 88 },
+        { "x": 68, "y": 75 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "custom",
-      "zLayer": 86
+      "zLayer": 77
     },
     {
       "id": "south-monitor-bank",
@@ -325,23 +377,23 @@
       "sourceAssetId": "OPS_CONSOLE_FRONT",
       "anchor": { "x": 44, "y": 85 },
       "footprint": [
-        { "x": 29, "y": 74 },
-        { "x": 51, "y": 69 },
-        { "x": 63, "y": 84 },
-        { "x": 40, "y": 96 },
-        { "x": 24, "y": 86 }
+        { "x": 27, "y": 66 },
+        { "x": 48, "y": 62 },
+        { "x": 61, "y": 75 },
+        { "x": 44, "y": 86 },
+        { "x": 25, "y": 78 }
       ],
       "occlusionFootprint": [
-        { "x": 25, "y": 84 },
-        { "x": 63, "y": 83 },
-        { "x": 57, "y": 98 },
-        { "x": 39, "y": 100 },
-        { "x": 25, "y": 90 }
+        { "x": 26, "y": 70 },
+        { "x": 61, "y": 73 },
+        { "x": 56, "y": 86 },
+        { "x": 39, "y": 88 },
+        { "x": 25, "y": 79 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 96
+      "zLayer": 78
     },
     {
       "id": "southeast-ops-desk",
@@ -349,24 +401,24 @@
       "sourceAssetId": "OPS_CONSOLE_FRONT",
       "anchor": { "x": 80, "y": 91 },
       "footprint": [
-        { "x": 60, "y": 84 },
-        { "x": 80, "y": 78 },
-        { "x": 100, "y": 91 },
-        { "x": 100, "y": 100 },
-        { "x": 76, "y": 100 },
-        { "x": 60, "y": 94 }
+        { "x": 52, "y": 76 },
+        { "x": 74, "y": 72 },
+        { "x": 87, "y": 83 },
+        { "x": 79, "y": 96 },
+        { "x": 57, "y": 95 },
+        { "x": 49, "y": 85 }
       ],
       "occlusionFootprint": [
-        { "x": 60, "y": 92 },
-        { "x": 100, "y": 92 },
-        { "x": 100, "y": 100 },
-        { "x": 76, "y": 100 },
-        { "x": 60, "y": 96 }
+        { "x": 52, "y": 83 },
+        { "x": 86, "y": 86 },
+        { "x": 79, "y": 96 },
+        { "x": 57, "y": 98 },
+        { "x": 49, "y": 89 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 100
+      "zLayer": 90
     },
     {
       "id": "southwest-garden-terrace",

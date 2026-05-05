@@ -61,6 +61,8 @@ interface DragState {
 
 const STATUS_INTERVAL_MS = 5_000;
 const DRAG_THRESHOLD_PX = 8;
+const MIN_FALLBACK_ROUTE_DISTANCE = 7;
+const MAX_FALLBACK_ROUTE_DISTANCE = 30;
 
 const STATUS_COLORS: Record<OfficeStatus, string> = {
   active: "#8dfff0",
@@ -111,8 +113,21 @@ function pickPatrol(name: string): string[] {
 }
 
 function chooseDestination(agent: SceneAgent): string {
-  const candidates = sameComponentNodeIds(agent.currentNodeId, agent.patrolNodes)
+  const patrolCandidates = sameComponentNodeIds(agent.currentNodeId, agent.patrolNodes)
     .filter((nodeId) => nodeId !== agent.currentNodeId);
+  if (patrolCandidates.length > 0) {
+    return patrolCandidates[Math.floor(Math.random() * patrolCandidates.length)] ?? agent.currentNodeId;
+  }
+
+  const currentNode = NAV_NODES[agent.currentNodeId];
+  const componentNodeIds = sameComponentNodeIds(agent.currentNodeId, Object.keys(NAV_NODES));
+  const candidates = componentNodeIds.filter((nodeId) => {
+    if (nodeId === agent.currentNodeId) return false;
+    const node = NAV_NODES[nodeId];
+    if (!currentNode || !node) return true;
+    const distance = Math.hypot(node.x - currentNode.x, node.y - currentNode.y);
+    return distance >= MIN_FALLBACK_ROUTE_DISTANCE && distance <= MAX_FALLBACK_ROUTE_DISTANCE;
+  });
   if (candidates.length === 0) return agent.currentNodeId;
   return candidates[Math.floor(Math.random() * candidates.length)] ?? agent.currentNodeId;
 }
@@ -594,6 +609,12 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
   const collapsedMissionTitle = veryCompactScene ? "Mission" : "Mission Control";
   const collapsedOverlayTitle = veryCompactScene ? "Overlay" : "Live Overlay";
   const compactSummary = `${visibleEmployees} visible · ${movingAgents} moving`;
+  const foregroundOccluders = useMemo(
+    () => SCENE_OBJECTS.filter((object) => object.occludesAgents),
+    [],
+  );
+  const cssPolygon = (points: ScenePoint[]) =>
+    `polygon(${points.map((point) => `${point.x}% ${point.y}%`).join(", ")})`;
 
   const clientToScenePoint = (clientX: number, clientY: number): ScenePoint | null => {
     const rect = sceneRef.current?.getBoundingClientRect();
@@ -825,7 +846,9 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
               />
             ))}
 
-            {showGraph && SCENE_OBJECTS.map((object) => (
+            {showGraph && SCENE_OBJECTS
+              .filter((object) => object.blocksMovement || object.occludesAgents)
+              .map((object) => (
               <g key={object.id}>
                 <polygon
                   points={object.footprint.map((point) => `${point.x},${point.y}`).join(" ")}
@@ -935,6 +958,23 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
               zIndex: 3,
             }}
           >
+            {foregroundOccluders.map((object) => (
+              <div
+                key={`${object.id}-foreground`}
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: Math.round(object.zLayer * 10),
+                  pointerEvents: "none",
+                  backgroundImage: `url(${SCENE_FOREGROUND_ASSET})`,
+                  backgroundPosition: "center",
+                  backgroundSize: "100% 100%",
+                  clipPath: cssPolygon(object.occlusionFootprint ?? object.footprint),
+                }}
+              />
+            ))}
+
             {sortedAgents.map((agent) => {
               const moving = agent.path.length > 0;
               const focused = agent.name === activeAgentName;
@@ -1138,26 +1178,6 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
                 />
               </div>
             )}
-          </div>
-
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: 5,
-              pointerEvents: "none",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                backgroundImage: `url(${SCENE_FOREGROUND_ASSET})`,
-                backgroundPosition: "center",
-                backgroundSize: "100% 100%",
-              }}
-            />
           </div>
 
           <div
