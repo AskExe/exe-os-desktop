@@ -34,6 +34,7 @@ export interface SceneObject {
   orientation: "front" | "side" | "back" | "custom";
   sourceAssetId: string | null;
   zLayer: number;
+  occluderAsset?: string;
 }
 
 interface OfficeLevelNavSettings {

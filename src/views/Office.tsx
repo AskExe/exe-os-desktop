@@ -61,8 +61,8 @@ interface DragState {
 
 const STATUS_INTERVAL_MS = 5_000;
 const DRAG_THRESHOLD_PX = 8;
-const MIN_FALLBACK_ROUTE_DISTANCE = 7;
-const MAX_FALLBACK_ROUTE_DISTANCE = 30;
+const FALLBACK_ROUTE_MIN_DISTANCE = 3.2;
+const FALLBACK_ROUTE_TARGET_DISTANCE = 18;
 
 const STATUS_COLORS: Record<OfficeStatus, string> = {
   active: "#8dfff0",
@@ -79,10 +79,10 @@ const STATUS_LABELS: Record<OfficeStatus, string> = {
 };
 
 const SPEED_BY_STATUS: Record<OfficeStatus, number> = {
-  active: 9.4,
-  working: 7.6,
-  idle: 4.1,
-  offline: 3.2,
+  active: 5.2,
+  working: 4.6,
+  idle: 3.2,
+  offline: 2.5,
 };
 
 function toOfficeEmployee(emp: Employee): OfficeEmployee {
@@ -92,13 +92,13 @@ function toOfficeEmployee(emp: Employee): OfficeEmployee {
 function pauseForStatus(status: OfficeStatus): number {
   switch (status) {
     case "active":
-      return 450 + Math.random() * 800;
+      return 180 + Math.random() * 320;
     case "working":
-      return 950 + Math.random() * 1200;
+      return 360 + Math.random() * 520;
     case "idle":
-      return 1800 + Math.random() * 2200;
+      return 650 + Math.random() * 900;
     case "offline":
-      return 2400 + Math.random() * 2600;
+      return 900 + Math.random() * 1200;
   }
 }
 
@@ -121,13 +121,23 @@ function chooseDestination(agent: SceneAgent): string {
 
   const currentNode = NAV_NODES[agent.currentNodeId];
   const componentNodeIds = sameComponentNodeIds(agent.currentNodeId, Object.keys(NAV_NODES));
-  const candidates = componentNodeIds.filter((nodeId) => {
+  const candidates = componentNodeIds
+    .filter((nodeId) => {
     if (nodeId === agent.currentNodeId) return false;
     const node = NAV_NODES[nodeId];
     if (!currentNode || !node) return true;
     const distance = Math.hypot(node.x - currentNode.x, node.y - currentNode.y);
-    return distance >= MIN_FALLBACK_ROUTE_DISTANCE && distance <= MAX_FALLBACK_ROUTE_DISTANCE;
-  });
+      return distance >= FALLBACK_ROUTE_MIN_DISTANCE;
+    })
+    .sort((leftId, rightId) => {
+      const left = NAV_NODES[leftId];
+      const right = NAV_NODES[rightId];
+      if (!currentNode || !left || !right) return 0;
+      const leftDistance = Math.abs(Math.hypot(left.x - currentNode.x, left.y - currentNode.y) - FALLBACK_ROUTE_TARGET_DISTANCE);
+      const rightDistance = Math.abs(Math.hypot(right.x - currentNode.x, right.y - currentNode.y) - FALLBACK_ROUTE_TARGET_DISTANCE);
+      return leftDistance - rightDistance;
+    })
+    .slice(0, 18);
   if (candidates.length === 0) return agent.currentNodeId;
   return candidates[Math.floor(Math.random() * candidates.length)] ?? agent.currentNodeId;
 }
@@ -144,7 +154,7 @@ function buildAgent(employee: OfficeEmployee, index: number): SceneAgent {
   const currentNodeId = patrolNodes[0] ?? Object.keys(NAV_NODES)[0] ?? "nav-0-0";
   const node = NAV_NODES[currentNodeId] ?? Object.values(NAV_NODES)[0] ?? { x: 50, y: 50 };
 
-  return {
+  const agent: SceneAgent = {
     ...employee,
     accent: AGENT_ACCENTS[employee.name] ?? "#d2c6ff",
     bobPhase: index * 0.8,
@@ -159,6 +169,14 @@ function buildAgent(employee: OfficeEmployee, index: number): SceneAgent {
     spriteSrc: agentSpriteFor(employee.name, index),
     x: node.x,
     y: node.y,
+  };
+  const initialDestination = chooseDestination(agent);
+  const initialPath = shortestPath(currentNodeId, initialDestination).slice(1);
+
+  return {
+    ...agent,
+    path: initialPath,
+    pauseMs: initialPath.length > 0 ? 0 : agent.pauseMs,
   };
 }
 
@@ -967,10 +985,10 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
                   inset: 0,
                   zIndex: Math.round(object.zLayer * 10),
                   pointerEvents: "none",
-                  backgroundImage: `url(${SCENE_FOREGROUND_ASSET})`,
+                  backgroundImage: `url(${object.occluderAsset ?? SCENE_FOREGROUND_ASSET})`,
                   backgroundPosition: "center",
                   backgroundSize: "100% 100%",
-                  clipPath: cssPolygon(object.occlusionFootprint ?? object.footprint),
+                  clipPath: object.occluderAsset ? undefined : cssPolygon(object.occlusionFootprint ?? object.footprint),
                 }}
               />
             ))}

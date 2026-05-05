@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import random
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -15,6 +16,8 @@ PUBLIC_ROOT = ROOT / "public"
 LEVEL_PATH = ROOT / "src" / "views" / "officeLevel.json"
 OUTPUT_BACKGROUND = ROOT / "public" / "virtual-office" / "scene-background.png"
 OUTPUT_FOREGROUND = ROOT / "public" / "virtual-office" / "scene-foreground.png"
+OUTPUT_OCCLUDERS = ROOT / "public" / "virtual-office" / "occluders"
+WRITE_OCCLUDERS = os.environ.get("OFFICE_WRITE_OCCLUDERS") == "1"
 
 AA = 2
 SCREEN_GOLD = (226, 172, 64, 255)
@@ -504,6 +507,8 @@ def build_plate_foreground() -> Image.Image:
     foreground = Image.new("RGBA", (BASE_W, BASE_H), (0, 0, 0, 0))
     mask = Image.new("L", (BASE_W, BASE_H), 0)
     mask_draw = ImageDraw.Draw(mask)
+    if WRITE_OCCLUDERS:
+        OUTPUT_OCCLUDERS.mkdir(parents=True, exist_ok=True)
     for obj in LEVEL["objects"]:
         if not obj.get("occludesAgents"):
             continue
@@ -515,6 +520,14 @@ def build_plate_foreground() -> Image.Image:
             for point in obj.get("occlusionFootprint", obj["footprint"])
         ]
         mask_draw.polygon(points, fill=255)
+        if WRITE_OCCLUDERS:
+            object_mask = Image.new("L", (BASE_W, BASE_H), 0)
+            object_mask_draw = ImageDraw.Draw(object_mask)
+            object_mask_draw.polygon(points, fill=255)
+            occluder = Image.new("RGBA", (BASE_W, BASE_H), (0, 0, 0, 0))
+            occluder.alpha_composite(source)
+            occluder.putalpha(object_mask)
+            occluder.save(OUTPUT_OCCLUDERS / f"{obj['id']}.png", optimize=True, compress_level=9)
     foreground.alpha_composite(source)
     foreground.putalpha(mask)
     return foreground
@@ -557,6 +570,8 @@ def main() -> None:
     build_foreground().save(OUTPUT_FOREGROUND)
     print(f"Wrote {OUTPUT_BACKGROUND}")
     print(f"Wrote {OUTPUT_FOREGROUND}")
+    if WRITE_OCCLUDERS and OUTPUT_OCCLUDERS.exists():
+        print(f"Wrote occluders to {OUTPUT_OCCLUDERS}")
 
 
 if __name__ == "__main__":

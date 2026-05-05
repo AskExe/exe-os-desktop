@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "virtual-office:build-scene": "python3 scripts/build_office_scene.py",
+    "virtual-office:sam3": "python3 scripts/segment_office_with_sam3.py",
     "virtual-office:sync": "node scripts/sync-virtual-office.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
