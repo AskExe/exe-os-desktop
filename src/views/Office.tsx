@@ -3,16 +3,26 @@ import type { TabKey } from "../components/Sidebar";
 import { fetchEmployees, type Employee } from "../services/exeOsData.js";
 import {
   AGENT_ACCENTS,
-  FOREGROUND_SLICES,
+  AGENT_SPRITES,
+  DEFAULT_AGENT_SPRITES,
+  DEFAULT_PATROL_ROUTE,
   formatAgentName,
   NAV_EDGES,
   NAV_NODES,
   nearestNodeId,
-  OFFICE_DOCK_TABS,
+  nearestReachableNodeId,
   PATROL_ROUTES,
   SCENE_ASSET,
+  SCENE_ASSET_LINKED_OBJECT_COUNT,
+  SCENE_FOREGROUND_ASSET,
+  SCENE_OCCLUDER_COUNT,
+  SCENE_OBJECT_COUNT,
+  SCENE_OBJECTS,
   SCENE_RATIO,
+  sameComponentNodeIds,
   shortestPath,
+  WALKABLE_ZONES,
+  pointInObstacle,
   type OfficeEmployee,
   type OfficeStatus,
   type ScenePoint,
@@ -28,10 +38,14 @@ interface SceneAgent extends OfficeEmployee {
   accent: string;
   bobPhase: number;
   currentNodeId: string;
+  directionX: number;
+  directionY: number;
+  facing: 1 | -1;
   path: string[];
   patrolNodes: string[];
   pauseMs: number;
   speed: number;
+  spriteSrc: string;
   x: number;
   y: number;
 }
@@ -69,10 +83,6 @@ const SPEED_BY_STATUS: Record<OfficeStatus, number> = {
   offline: 0,
 };
 
-const DEFAULT_PATROL = ["tableNorth", "tableSouth", "consoleWest", "holoRing"];
-
-const FOUNDER_MARKER = { x: 10, y: 88 };
-
 function toOfficeEmployee(emp: Employee): OfficeEmployee {
   return { name: emp.name, role: emp.role, status: emp.status };
 }
@@ -90,38 +100,48 @@ function pauseForStatus(status: OfficeStatus): number {
   }
 }
 
-function polygon(points: ScenePoint[]): string {
-  return `polygon(${points.map((point) => `${point.x}% ${point.y}%`).join(", ")})`;
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function pickPatrol(name: string, index: number): string[] {
-  return PATROL_ROUTES[name] ?? [...DEFAULT_PATROL.slice(index % DEFAULT_PATROL.length), ...DEFAULT_PATROL].slice(0, 4);
+function pickPatrol(name: string): string[] {
+  if (PATROL_ROUTES[name]?.length) return PATROL_ROUTES[name];
+  if (DEFAULT_PATROL_ROUTE.length) return DEFAULT_PATROL_ROUTE;
+  return [Object.keys(NAV_NODES)[0] ?? "nav-0-0"];
 }
 
 function chooseDestination(agent: SceneAgent): string {
-  const candidates = agent.patrolNodes.filter((nodeId) => nodeId !== agent.currentNodeId);
+  const candidates = sameComponentNodeIds(agent.currentNodeId, agent.patrolNodes)
+    .filter((nodeId) => nodeId !== agent.currentNodeId);
   if (candidates.length === 0) return agent.currentNodeId;
   return candidates[Math.floor(Math.random() * candidates.length)] ?? agent.currentNodeId;
 }
 
+function agentSpriteFor(name: string, index: number): string {
+  return AGENT_SPRITES[name]
+    ?? DEFAULT_AGENT_SPRITES[index % DEFAULT_AGENT_SPRITES.length]
+    ?? DEFAULT_AGENT_SPRITES[0]
+    ?? "";
+}
+
 function buildAgent(employee: OfficeEmployee, index: number): SceneAgent {
-  const patrolNodes = pickPatrol(employee.name, index);
-  const currentNodeId = patrolNodes[0] ?? "tableSouth";
-  const node = NAV_NODES[currentNodeId] ?? NAV_NODES.tableSouth;
+  const patrolNodes = pickPatrol(employee.name);
+  const currentNodeId = patrolNodes[0] ?? Object.keys(NAV_NODES)[0] ?? "nav-0-0";
+  const node = NAV_NODES[currentNodeId] ?? Object.values(NAV_NODES)[0] ?? { x: 50, y: 50 };
 
   return {
     ...employee,
     accent: AGENT_ACCENTS[employee.name] ?? "#d2c6ff",
     bobPhase: index * 0.8,
     currentNodeId,
+    directionX: 0.42,
+    directionY: 0.18,
+    facing: index % 2 === 0 ? 1 : -1,
     path: [],
     patrolNodes,
     pauseMs: 400 + index * 260,
     speed: SPEED_BY_STATUS[employee.status],
+    spriteSrc: agentSpriteFor(employee.name, index),
     x: node.x,
     y: node.y,
   };
@@ -134,33 +154,48 @@ function syncAgents(prev: SceneAgent[], employees: OfficeEmployee[]): SceneAgent
     const existing = byName.get(employee.name);
     if (!existing) return buildAgent(employee, index);
 
+    const patrolNodes = pickPatrol(employee.name);
+    const fallbackNodeId = NAV_NODES[existing.currentNodeId]
+      ? existing.currentNodeId
+      : nearestNodeId({ x: existing.x, y: existing.y });
+    const fallbackNode = NAV_NODES[fallbackNodeId] ?? Object.values(NAV_NODES)[0];
+    const activePath = existing.path.filter((nodeId) => Boolean(NAV_NODES[nodeId]));
+
     return {
       ...existing,
       role: employee.role,
       status: employee.status,
       speed: SPEED_BY_STATUS[employee.status],
       accent: AGENT_ACCENTS[employee.name] ?? existing.accent,
-      patrolNodes: pickPatrol(employee.name, index),
-      path: employee.status === "offline" ? [] : existing.path,
+      currentNodeId: fallbackNodeId,
+      directionX: existing.directionX,
+      directionY: existing.directionY,
+      patrolNodes,
+      path: employee.status === "offline" ? [] : activePath,
+      spriteSrc: AGENT_SPRITES[employee.name] ?? existing.spriteSrc ?? agentSpriteFor(employee.name, index),
+      x: NAV_NODES[existing.currentNodeId] ? existing.x : (fallbackNode?.x ?? existing.x),
+      y: NAV_NODES[existing.currentNodeId] ? existing.y : (fallbackNode?.y ?? existing.y),
     };
   });
 }
 
 function tickAgents(prev: SceneAgent[], elapsedMs: number): SceneAgent[] {
   return prev.map((agent) => {
-    const bobPhase = agent.bobPhase + elapsedMs * (agent.speed > 0 ? 0.008 : 0.0022);
-
     if (agent.status === "offline") {
       return {
         ...agent,
-        bobPhase,
+        bobPhase: agent.bobPhase + elapsedMs * 0.0012,
         pauseMs: pauseForStatus("offline"),
         path: [],
         speed: 0,
       };
     }
 
+    let distanceMoved = 0;
     let currentNodeId = agent.currentNodeId;
+    let directionX = agent.directionX;
+    let directionY = agent.directionY;
+    let facing = agent.facing;
     let path = [...agent.path];
     let pauseMs = Math.max(0, agent.pauseMs - elapsedMs);
     let x = agent.x;
@@ -184,12 +219,18 @@ function tickAgents(prev: SceneAgent[], elapsedMs: number): SceneAgent[] {
       const dx = target.x - x;
       const dy = target.y - y;
       const distance = Math.hypot(dx, dy);
+      facing = dx < 0 ? -1 : 1;
+      if (distance > 0.001) {
+        directionX = dx / distance;
+        directionY = dy / distance;
+      }
 
       if (distance <= remainingDistance || distance < 0.001) {
         x = target.x;
         y = target.y;
         currentNodeId = target.id;
         path.shift();
+        distanceMoved += distance;
         remainingDistance -= distance;
 
         if (path.length === 0) {
@@ -199,14 +240,20 @@ function tickAgents(prev: SceneAgent[], elapsedMs: number): SceneAgent[] {
         const step = remainingDistance / distance;
         x += dx * step;
         y += dy * step;
+        distanceMoved += remainingDistance;
         remainingDistance = 0;
       }
     }
+
+    const bobPhase = agent.bobPhase + (distanceMoved > 0.001 ? distanceMoved * 1.12 : elapsedMs * 0.0011);
 
     return {
       ...agent,
       bobPhase,
       currentNodeId,
+      directionX,
+      directionY,
+      facing,
       path,
       pauseMs,
       x,
@@ -220,117 +267,176 @@ function routePoints(agent: SceneAgent | null): ScenePoint[] {
   return [{ x: agent.x, y: agent.y }, ...agent.path.map((nodeId) => NAV_NODES[nodeId]).filter(Boolean)];
 }
 
-function getAgentHeading(agent: SceneAgent): number {
-  const nextNodeId = agent.path[0];
-  if (!nextNodeId) return 0;
-  const nextNode = NAV_NODES[nextNodeId];
-  if (!nextNode) return 0;
-  return Math.atan2(nextNode.y - agent.y, nextNode.x - agent.x);
-}
-
 function AgentSprite({
   accent,
+  directionX,
+  directionY,
+  facing,
   highlighted,
   moving,
   opacity = 1,
   phase,
-  heading,
-  status,
+  size,
+  spriteSrc,
 }: {
   accent: string;
+  directionX: number;
+  directionY: number;
+  facing: 1 | -1;
   highlighted: boolean;
   moving: boolean;
   opacity?: number;
   phase: number;
-  heading: number;
-  status: OfficeStatus;
+  size: number;
+  spriteSrc: string;
 }) {
-  const stride = moving ? Math.sin(phase * 1.9) * 3.6 : 0;
-  const lift = moving ? Math.max(0, Math.cos(phase * 1.9)) * 1.8 : 0;
-  const sway = moving ? Math.sin(phase * 1.9) * 1.6 : 0;
-  const turn = clamp((heading * 180 / Math.PI) * 0.17, -14, 14);
-  const lean = moving ? clamp(Math.cos(heading) * 3.8, -3.8, 3.8) : 0;
-  const skin = status === "offline" ? "#b5a28f" : "#e5c3a0";
-  const hair = status === "offline" ? "#42352f" : "#2f2421";
-  const suit = status === "offline" ? "#1a2028" : "#1a2433";
-  const suitShadow = status === "offline" ? "#10151d" : "#111924";
-  const trim = status === "offline" ? "rgba(180, 190, 205, 0.12)" : "rgba(173, 219, 255, 0.2)";
+  const stride = Math.sin(phase * 0.94);
+  const strideHeight = Math.max(0, Math.sin(phase + 0.42));
+  const sway = moving
+    ? stride * 0.26 + directionX * 0.18
+    : Math.sin(phase * 0.2) * 0.05;
+  const lift = moving ? strideHeight * 1.15 : Math.sin(phase * 0.35) * 0.06;
+  const lean = moving ? directionX * 4.2 : 0;
+  const pitch = moving ? -directionY * 6.4 : 0;
+  const stretch = moving ? 1 + Math.abs(stride) * 0.018 : 1;
+  const squash = moving ? 1 - Math.abs(stride) * 0.024 : 1;
+  const shadowOffsetX = moving ? directionX * 2.6 : 0;
+  const shadowScale = moving ? 0.94 + Math.abs(stride) * 0.05 : 1;
+  const shadowWidth = size * 0.34;
+  const spriteFilter = highlighted
+    ? `drop-shadow(0 0 16px ${accent}42) drop-shadow(0 18px 26px rgba(0, 0, 0, 0.38))`
+    : "drop-shadow(0 14px 22px rgba(0, 0, 0, 0.34))";
+  const bodyTransform = `translateX(calc(-50% + ${sway}px)) translateY(${lift}px) perspective(260px) rotateX(${pitch}deg) rotateZ(${lean}deg) scaleX(${facing * squash}) scaleY(${stretch})`;
+  const lowerBodySwing = moving ? stride * facing * size * 0.018 : 0;
+  const lowerBodyTransform = `translateX(calc(-50% + ${sway + lowerBodySwing}px)) translateY(${lift}px) perspective(260px) rotateX(${pitch}deg) rotateZ(${lean + stride * facing * 2.4}deg) scaleX(${facing * squash}) scaleY(${stretch})`;
+  const frontStep = moving ? stride * facing * size * 0.055 : 0;
+  const rearStep = moving ? -stride * facing * size * 0.045 : 0;
+  const footLift = moving ? Math.max(0, Math.abs(stride) - 0.25) * size * 0.012 : 0;
 
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 72 96"
+    <div
       style={{
-        width: 46,
-        height: 62,
+        position: "relative",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        width: size * 0.54,
+        height: size,
         opacity,
-        overflow: "visible",
-        filter: highlighted
-          ? `drop-shadow(0 0 14px ${accent}44) drop-shadow(0 12px 24px rgba(0, 0, 0, 0.42))`
-          : "drop-shadow(0 10px 18px rgba(0, 0, 0, 0.32))",
       }}
     >
-      <ellipse cx="36" cy="87" rx="14" ry="5.5" fill="rgba(0, 0, 0, 0.34)" />
-      <g transform={`translate(36 54) rotate(${turn}) translate(-36 -54)`}>
-        <g transform={`translate(0 ${sway * 0.35})`}>
-          <path d="M24 66 L48 66 L52 85 L20 85 Z" fill={suitShadow} />
-          <g transform={`translate(${-stride * 0.12} ${lift})`}>
-            <path d="M29 60 L36 60 L34 87 L25 87 Z" fill={suit} />
-            <path d="M24 84 L35 84 L35 89 L23 89 Z" fill="#090d14" />
-          </g>
-          <g transform={`translate(${stride * 0.12} ${Math.max(0, -stride * 0.08)})`}>
-            <path d="M37 60 L44 60 L47 87 L38 87 Z" fill={suit} />
-            <path d="M37 84 L49 84 L49 89 L37 89 Z" fill="#090d14" />
-          </g>
-          <g transform={`translate(0 ${lean * 0.2})`}>
-            <g transform={`translate(${-stride * 0.08} ${Math.max(0, stride * 0.04)})`}>
-              <path
-                d="M20 33 C18 40 18 49 21 58 L26 57 C25 49 25 41 27 35 Z"
-                fill={suitShadow}
-              />
-            </g>
-            <g transform={`translate(${stride * 0.08} ${Math.max(0, -stride * 0.04)})`}>
-              <path
-                d="M52 33 C54 40 54 49 51 58 L46 57 C47 49 47 41 45 35 Z"
-                fill={suitShadow}
-              />
-            </g>
-            <path d="M22 31 L50 31 L54 58 L36 71 L18 58 Z" fill={suit} />
-            <path d="M27 35 L45 35 L47 55 L36 65 L25 55 Z" fill={trim} />
-            <path d="M31 35 L41 35 L43 60 L29 60 Z" fill={accent} opacity={0.28} />
-            <path d="M31 28 L41 28 L39 34 L33 34 Z" fill="#ece8df" />
-            <rect x="30" y="36" width="12" height="3" fill={accent} opacity={0.75} />
-            <rect x="26" y="28" width="20" height="2.5" fill="rgba(255,255,255,0.12)" />
-          </g>
-          <rect x="33" y="22" width="6" height="7" fill={skin} />
-          <ellipse cx="36" cy="18.5" rx="10" ry="10.5" fill={skin} />
-          <path
-            d="M26 20 C26 10, 32 7, 37 7 C43 7, 47 10, 46 21 C43 16, 39 15, 35 15 C31 15, 28 16, 26 20 Z"
-            fill={hair}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: "50%",
+          bottom: 4,
+          width: shadowWidth,
+          height: size * 0.08,
+          background: "rgba(0, 0, 0, 0.36)",
+          borderRadius: "999px",
+          filter: "blur(2px)",
+          transform: `translateX(calc(-50% + ${shadowOffsetX}px)) scale(${shadowScale})`,
+        }}
+      />
+      {moving ? (
+        <>
+          <img
+            alt=""
+            aria-hidden
+            draggable={false}
+            src={spriteSrc}
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 0,
+              height: size,
+              width: "auto",
+              userSelect: "none",
+              pointerEvents: "none",
+              clipPath: "inset(0 0 38% 0)",
+              transform: bodyTransform,
+              transformOrigin: "50% 100%",
+              filter: spriteFilter,
+            }}
           />
-          <path
-            d="M29 12 C31 10, 34 9, 38 9 C41 9, 43 10, 45 13"
-            fill="none"
-            stroke="rgba(255,255,255,0.18)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
+          <img
+            alt=""
+            aria-hidden
+            draggable={false}
+            src={spriteSrc}
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 0,
+              height: size,
+              width: "auto",
+              userSelect: "none",
+              pointerEvents: "none",
+              clipPath: "inset(58% 0 0 0)",
+              transform: lowerBodyTransform,
+              transformOrigin: "50% 100%",
+              filter: spriteFilter,
+            }}
           />
-          <rect x="30" y="17" width="12" height="4.5" fill="rgba(134, 194, 255, 0.22)" />
-          <rect x="28" y="22.5" width="16" height="1.4" fill="rgba(0,0,0,0.18)" />
-          <circle cx="46.5" cy="19" r="1.6" fill={accent} opacity={0.82} />
-        </g>
-      </g>
-    </svg>
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: size * 0.02,
+              width: size * 0.075,
+              height: size * 0.018,
+              borderRadius: "999px",
+              background: "rgba(5, 8, 12, 0.72)",
+              boxShadow: `0 0 8px ${accent}22`,
+              transform: `translateX(calc(-50% + ${frontStep}px)) translateY(${-footLift}px) rotate(${directionX * 16}deg)`,
+            }}
+          />
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: size * 0.012,
+              width: size * 0.068,
+              height: size * 0.016,
+              borderRadius: "999px",
+              background: "rgba(2, 4, 8, 0.62)",
+              transform: `translateX(calc(-50% + ${rearStep}px)) rotate(${directionX * -12}deg)`,
+            }}
+          />
+        </>
+      ) : (
+        <img
+          alt=""
+          aria-hidden
+          draggable={false}
+          src={spriteSrc}
+          style={{
+            position: "relative",
+            height: size,
+            width: "auto",
+            userSelect: "none",
+            pointerEvents: "none",
+            transform: `translateY(${lift}px) translateX(${sway}px) perspective(260px) rotateX(${pitch}deg) rotateZ(${lean}deg) scaleX(${facing * squash}) scaleY(${stretch})`,
+            transformOrigin: "50% 100%",
+            filter: spriteFilter,
+          }}
+        />
+      )}
+    </div>
   );
 }
 
-export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeViewProps) {
+export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
   const [employees, setEmployees] = useState<OfficeEmployee[]>([]);
   const [agents, setAgents] = useState<SceneAgent[]>([]);
   const [focusedAgentName, setFocusedAgentName] = useState<string | null>(null);
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
-  const [showGraph, setShowGraph] = useState(true);
+  const [missionPanelCollapsed, setMissionPanelCollapsed] = useState(false);
+  const [overlayPanelCollapsed, setOverlayPanelCollapsed] = useState(false);
   const [sceneBounds, setSceneBounds] = useState({ width: 0, height: 0 });
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -423,12 +529,16 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
     [activeAgentName, agents],
   );
 
-  const dragTargetId = useMemo(
-    () => (dragState?.started ? nearestNodeId(dragState.scenePoint) : null),
-    [dragState],
-  );
+  const dragTargetId = useMemo(() => {
+    if (!dragState?.started) return null;
+    if (!inspectedAgent) return nearestNodeId(dragState.scenePoint);
+    return nearestReachableNodeId(inspectedAgent.currentNodeId, dragState.scenePoint);
+  }, [dragState, inspectedAgent]);
 
   const dragTargetNode = dragTargetId ? NAV_NODES[dragTargetId] : null;
+  const dragTargetBlocked = dragState?.started ? pointInObstacle(dragState.scenePoint) : false;
+  const showGraph = typeof window !== "undefined"
+    && new URLSearchParams(window.location.search).get("officeDebug") === "1";
 
   const sortedAgents = useMemo(
     () => [...agents].sort((left, right) => left.y - right.y),
@@ -459,20 +569,41 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
   const panelHeadlineBox = clamp(46 * uiScale, 30, 46);
   const chipPaddingY = clamp(6 * uiScale, 4, 6);
   const chipPaddingX = clamp(9 * uiScale, 6, 9);
+  const panelToggleSize = clamp(32 * uiScale, 24, 32);
+  const panelToggleIconSize = clamp(18 * uiScale, 14, 18);
+  const collapsedPanelPaddingY = clamp(10 * uiScale, 8, 10);
+  const collapsedPanelPaddingX = clamp(12 * uiScale, 8, 12);
+  const collapsedPanelGap = clamp(10 * uiScale, 6, 10);
+  const collapsedMissionPanelWidth = clamp(sceneWidth * 0.19, 160, 226);
+  const collapsedOverlayPanelWidth = clamp(sceneWidth * 0.17, 160, 240);
+  const collapsedPanelTitleSize = clamp(13 * uiScale, 10.5, 13);
+  const collapsedSummarySize = clamp(10.5 * uiScale, 8.5, 10.5);
+  const collapsedBadgeSize = clamp(34 * uiScale, 24, 34);
   const compactScene = sceneWidth < 1080;
   const veryCompactScene = sceneWidth < 920;
-  const sceneTags = veryCompactScene
+  const baseSceneTags = veryCompactScene
     ? ["Scene Layer"]
     : compactScene
-      ? ["Scene Layer", "Movement Overlay"]
-      : ["Scene Layer", "Movement Overlay", "Foreground Occlusion"];
+      ? ["Scene Layer", "Object Map"]
+      : ["Scene Layer", "Movement Overlay", "Object Map"];
+  const sceneTags = SCENE_OCCLUDER_COUNT > 0 && !veryCompactScene
+    ? [...baseSceneTags, "Foreground Occlusion"]
+    : baseSceneTags;
   const metricsColumns = compactScene ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))";
-  const dockGap = clamp(8 * uiScale, 4, 8);
-  const dockPaddingY = clamp(12 * uiScale, 8, 12);
-  const dockPaddingX = clamp(14 * uiScale, 8, 14);
-  const dockButtonMinWidth = clamp(sceneWidth * 0.075, 82, 126);
-  const founderGap = clamp(12 * uiScale, 8, 12);
-  const founderPadding = `${clamp(12 * uiScale, 8, 12)}px ${clamp(14 * uiScale, 10, 14)}px`;
+  const agentSpriteHeight = clamp(sceneWidth * 0.078, 76, 116);
+  const agentTagMinWidth = clamp(sceneWidth * 0.06, 78, 102);
+  const agentTagMaxWidth = clamp(sceneWidth * 0.125, 116, 162);
+  const agentTagPaddingY = clamp(7 * uiScale, 5, 7);
+  const agentTagPaddingX = clamp(8 * uiScale, 6, 8);
+  const agentTagOffset = clamp(10 * uiScale, 8, 10);
+  const agentTagStatusGap = clamp(6 * uiScale, 4, 6);
+  const agentTagStatusDot = clamp(5.5 * uiScale, 4.5, 5.5);
+  const agentTagStatusSize = clamp(8.5 * uiScale, 7.5, 8.8);
+  const agentTagNameSize = clamp(13.5 * uiScale, 11.5, 14);
+  const agentTagRoleSize = clamp(10.5 * uiScale, 9, 10.8);
+  const collapsedMissionTitle = veryCompactScene ? "Mission" : "Mission Control";
+  const collapsedOverlayTitle = veryCompactScene ? "Overlay" : "Live Overlay";
+  const compactSummary = `${visibleEmployees} visible · ${movingAgents} moving`;
 
   const clientToScenePoint = (clientX: number, clientY: number): ScenePoint | null => {
     const rect = sceneRef.current?.getBoundingClientRect();
@@ -485,10 +616,6 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
   };
 
   const moveAgentToPoint = (agentName: string, point: ScenePoint) => {
-    const targetNodeId = nearestNodeId(point);
-    const targetNode = NAV_NODES[targetNodeId];
-    if (!targetNode) return;
-
     setSelectedAgentName(agentName);
     setFocusedAgentName(agentName);
     setAgents((prev) =>
@@ -496,6 +623,9 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
         if (agent.name !== agentName) return agent;
 
         const startNodeId = nearestNodeId({ x: agent.x, y: agent.y });
+        const targetNodeId = nearestReachableNodeId(startNodeId, point);
+        const targetNode = NAV_NODES[targetNodeId];
+        if (!targetNode) return agent;
         const manualPath = shortestPath(startNodeId, targetNodeId).slice(1);
         if (agent.status === "offline") {
           return {
@@ -651,7 +781,7 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
               backgroundImage: `url(${SCENE_ASSET})`,
               backgroundPosition: "center",
               backgroundSize: "100% 100%",
-              filter: "saturate(0.92) contrast(1.02) brightness(0.92)",
+              filter: "saturate(1.04) contrast(1.1) brightness(0.98)",
             }}
           />
           <div
@@ -659,7 +789,7 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(180deg, rgba(4, 7, 14, 0.14), rgba(4, 7, 14, 0.22) 38%, rgba(4, 7, 14, 0.42) 100%)",
+              background: "linear-gradient(180deg, rgba(4, 7, 14, 0.06), rgba(4, 7, 14, 0.14) 38%, rgba(4, 7, 14, 0.26) 100%)",
             }}
           />
           <div
@@ -667,9 +797,9 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
             style={{
               position: "absolute",
               inset: 0,
-              background: "radial-gradient(circle at 50% 44%, rgba(135, 176, 255, 0.12), transparent 30%), radial-gradient(circle at 50% 52%, transparent 38%, rgba(2, 6, 12, 0.76) 100%)",
+              background: "radial-gradient(circle at 50% 43%, rgba(135, 176, 255, 0.1), transparent 28%), radial-gradient(circle at 50% 52%, transparent 42%, rgba(2, 6, 12, 0.5) 100%)",
               mixBlendMode: "screen",
-              opacity: 0.85,
+              opacity: 0.7,
             }}
           />
           <div
@@ -677,7 +807,7 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(100deg, transparent 0%, rgba(109, 162, 255, 0.08) 46%, rgba(109, 162, 255, 0.22) 49%, rgba(109, 162, 255, 0.08) 52%, transparent 100%)",
+              background: "linear-gradient(100deg, transparent 0%, rgba(109, 162, 255, 0.05) 46%, rgba(109, 162, 255, 0.16) 49%, rgba(109, 162, 255, 0.05) 52%, transparent 100%)",
               animation: "office-sweep 9.5s linear infinite",
               mixBlendMode: "screen",
               pointerEvents: "none",
@@ -702,11 +832,57 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
             style={{
               position: "absolute",
               inset: 0,
-              opacity: showGraph ? 1 : 0.32,
+              opacity: 1,
               transition: "opacity 180ms ease",
             }}
           >
-            {NAV_EDGES.map(([fromId, toId]) => {
+            {showGraph && WALKABLE_ZONES.map((zone) => (
+              <polygon
+                key={zone.id}
+                points={zone.points.map((point) => `${point.x},${point.y}`).join(" ")}
+                fill="rgba(96, 167, 255, 0.04)"
+                stroke="rgba(96, 167, 255, 0.24)"
+                strokeWidth={0.16}
+              />
+            ))}
+
+            {showGraph && SCENE_OBJECTS.map((object) => (
+              <g key={object.id}>
+                <polygon
+                  points={object.footprint.map((point) => `${point.x},${point.y}`).join(" ")}
+                  fill={object.sourceAssetId ? "rgba(255, 181, 90, 0.08)" : "rgba(255, 121, 121, 0.08)"}
+                  stroke={object.sourceAssetId ? "rgba(255, 181, 90, 0.34)" : "rgba(255, 121, 121, 0.34)"}
+                  strokeWidth={0.18}
+                />
+                <rect
+                  x={object.anchor.x - 4.8}
+                  y={object.anchor.y - 1.55}
+                  rx={0.36}
+                  width={9.6}
+                  height={1.9}
+                  fill="rgba(5, 7, 12, 0.84)"
+                  stroke="rgba(255, 244, 220, 0.14)"
+                  strokeWidth={0.08}
+                />
+                <text
+                  x={object.anchor.x}
+                  y={object.anchor.y - 0.32}
+                  textAnchor="middle"
+                  style={{
+                    fill: object.sourceAssetId ? "#ffd17a" : "#ff9e9e",
+                    fontFamily: "var(--font-label)",
+                    fontSize: "0.64px",
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    pointerEvents: "none",
+                  }}
+                >
+                  {object.sourceAssetId ?? object.label}
+                </text>
+              </g>
+            ))}
+
+            {showGraph && NAV_EDGES.map(([fromId, toId]) => {
               const from = NAV_NODES[fromId];
               const to = NAV_NODES[toId];
               if (!from || !to) return null;
@@ -784,8 +960,8 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
               const moving = agent.path.length > 0;
               const focused = agent.name === activeAgentName;
               const dragging = dragState?.started && dragState.agentName === agent.name;
-              const bob = moving ? Math.sin(agent.bobPhase) * 2.1 : Math.sin(agent.bobPhase) * 0.6;
-              const heading = getAgentHeading(agent);
+              const bob = moving ? 0 : Math.sin(agent.bobPhase * 0.4) * 0.35;
+              const labelAbove = agent.y > 24;
 
               return (
                 <div
@@ -825,10 +1001,14 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                       style={{
                         position: "absolute",
                         left: "50%",
-                        bottom: "100%",
-                        transform: "translate(-50%, -12px)",
-                        minWidth: 124,
-                        padding: "8px 10px 9px",
+                        ...(labelAbove ? { bottom: "100%" } : { top: "100%" }),
+                        transform: labelAbove
+                          ? `translate(-50%, -${agentTagOffset}px)`
+                          : `translate(-50%, ${agentTagOffset}px)`,
+                        minWidth: agentTagMinWidth,
+                        maxWidth: agentTagMaxWidth,
+                        width: "max-content",
+                        padding: `${agentTagPaddingY}px ${agentTagPaddingX}px ${agentTagPaddingY + 1}px`,
                         background: "rgba(5, 7, 12, 0.88)",
                         border: `1px solid ${focused ? agent.accent : "rgba(255, 244, 220, 0.12)"}`,
                         boxShadow: focused
@@ -836,16 +1016,17 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                           : "0 14px 24px rgba(0, 0, 0, 0.28)",
                         textAlign: "left",
                         pointerEvents: "none",
+                        backdropFilter: "blur(6px)",
                       }}
                     >
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 8,
-                          marginBottom: 5,
+                          gap: agentTagStatusGap,
+                          marginBottom: clamp(4 * uiScale, 3, 4),
                           fontFamily: "var(--font-label)",
-                          fontSize: 10,
+                          fontSize: agentTagStatusSize,
                           letterSpacing: "0.08em",
                           textTransform: "uppercase",
                           color: STATUS_COLORS[agent.status],
@@ -853,8 +1034,9 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                       >
                         <span
                           style={{
-                            width: 7,
-                            height: 7,
+                            width: agentTagStatusDot,
+                            height: agentTagStatusDot,
+                            flex: "0 0 auto",
                             background: STATUS_COLORS[agent.status],
                             boxShadow: `0 0 10px ${STATUS_COLORS[agent.status]}80`,
                           }}
@@ -864,7 +1046,7 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                       <div
                         style={{
                           fontFamily: "var(--font-headline)",
-                          fontSize: 16,
+                          fontSize: agentTagNameSize,
                           lineHeight: 1,
                           color: "#fff4dc",
                         }}
@@ -873,10 +1055,15 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                       </div>
                       <div
                         style={{
-                          marginTop: 4,
+                          marginTop: clamp(3 * uiScale, 2, 3),
                           fontFamily: "var(--font-body)",
-                          fontSize: 12,
+                          fontSize: agentTagRoleSize,
+                          lineHeight: 1.22,
                           color: "rgba(228, 224, 242, 0.82)",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
                         }}
                       >
                         {agent.role}
@@ -899,12 +1086,15 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
 
                     <AgentSprite
                       accent={agent.accent}
-                      heading={heading}
+                      directionX={agent.directionX}
+                      directionY={agent.directionY}
+                      facing={agent.facing}
                       highlighted={focused}
                       moving={moving}
                       opacity={dragging ? 0.2 : 1}
                       phase={agent.bobPhase}
-                      status={agent.status}
+                      size={agentSpriteHeight}
+                      spriteSrc={agent.spriteSrc}
                     />
                   </button>
                 </div>
@@ -940,7 +1130,7 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Drop to Re-route
+                  {dragTargetBlocked ? "Route Around Object" : "Drop to Re-route"}
                 </div>
                 <div
                   aria-hidden
@@ -957,12 +1147,15 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                 />
                 <AgentSprite
                   accent={inspectedAgent.accent}
-                  heading={getAgentHeading(inspectedAgent)}
+                  directionX={inspectedAgent.directionX}
+                  directionY={inspectedAgent.directionY}
+                  facing={inspectedAgent.facing}
                   highlighted={true}
                   moving={true}
                   opacity={0.96}
                   phase={inspectedAgent.bobPhase}
-                  status={inspectedAgent.status}
+                  size={agentSpriteHeight}
+                  spriteSrc={inspectedAgent.spriteSrc}
                 />
               </div>
             )}
@@ -977,20 +1170,15 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
               pointerEvents: "none",
             }}
           >
-            {FOREGROUND_SLICES.map((slice) => (
-              <div
-                key={slice.id}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundImage: `url(${SCENE_ASSET})`,
-                  backgroundPosition: "center",
-                  backgroundSize: "100% 100%",
-                  clipPath: polygon(slice.points),
-                  opacity: slice.opacity ?? 1,
-                }}
-              />
-            ))}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                backgroundImage: `url(${SCENE_FOREGROUND_ASSET})`,
+                backgroundPosition: "center",
+                backgroundSize: "100% 100%",
+              }}
+            />
           </div>
 
           <div
@@ -999,82 +1187,169 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
               top: sceneInset,
               left: sceneInset,
               zIndex: 6,
-              width: headerPanelWidth,
-              padding: `${clamp(18 * uiScale, 12, 18)}px ${panelPadding}px ${panelPadding}px`,
+              width: missionPanelCollapsed ? collapsedMissionPanelWidth : headerPanelWidth,
+              padding: missionPanelCollapsed
+                ? `${collapsedPanelPaddingY}px ${collapsedPanelPaddingX}px`
+                : `${clamp(18 * uiScale, 12, 18)}px ${panelPadding}px ${panelPadding}px`,
               background: "linear-gradient(180deg, rgba(5, 7, 12, 0.92), rgba(5, 7, 12, 0.78))",
               border: "1px solid rgba(255, 244, 220, 0.16)",
               boxShadow: "0 18px 40px rgba(0, 0, 0, 0.3)",
               backdropFilter: "blur(5px)",
+              transition: "width 180ms ease, padding 180ms ease, transform 180ms ease",
             }}
           >
             <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: panelHeadlineBox,
-                height: panelHeadlineBox,
-                marginBottom: clamp(10 * uiScale, 8, 16),
-                border: "1px solid rgba(245, 215, 110, 0.4)",
-                color: "#f5d76e",
-                fontFamily: "var(--font-headline)",
-                fontSize: panelHeadlineSize,
-                fontWeight: 700,
-              }}
-            >
-              2
-            </div>
-            <div
-              style={{
-                fontFamily: "var(--font-headline)",
-                fontSize: panelTitleSize,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "#fff4dc",
-                lineHeight: 1.04,
-              }}
-            >
-              Mission Control Floor
-            </div>
-            <div
-              style={{
-                marginTop: clamp(10 * uiScale, 8, 12),
-                maxWidth: headerPanelWidth * 0.76,
-                fontFamily: "var(--font-body)",
-                fontSize: panelBodySize,
-                lineHeight: 1.45,
-                color: "rgba(228, 224, 242, 0.88)",
-              }}
-            >
-              Dense operational cockpit. Structured, focused, always-on.
-            </div>
-            <div
-              style={{
-                marginTop: clamp(14 * uiScale, 10, 18),
                 display: "flex",
-                gap: clamp(6 * uiScale, 4, 8),
-                flexWrap: "wrap",
+                alignItems: missionPanelCollapsed ? "center" : "flex-start",
+                justifyContent: "space-between",
+                gap: collapsedPanelGap,
               }}
             >
-              {sceneTags.map((label) => (
-                <span
-                  key={label}
+              {missionPanelCollapsed ? (
+                <div
                   style={{
-                    padding: `${chipPaddingY}px ${chipPaddingX}px`,
-                    fontFamily: "var(--font-label)",
-                    fontSize: panelLabelSize,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "#cfc6b1",
-                    border: "1px solid rgba(255, 244, 220, 0.12)",
-                    background: "rgba(255, 255, 255, 0.02)",
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: collapsedPanelGap,
                   }}
                 >
-                  {label}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: collapsedBadgeSize,
+                      height: collapsedBadgeSize,
+                      border: "1px solid rgba(245, 215, 110, 0.4)",
+                      color: "#f5d76e",
+                      fontFamily: "var(--font-headline)",
+                      fontSize: clamp(20 * uiScale, 13, 20),
+                      fontWeight: 700,
+                      flex: "0 0 auto",
+                    }}
+                  >
+                    2
+                  </div>
+                  <div
+                    style={{
+                      minWidth: 0,
+                      fontFamily: "var(--font-headline)",
+                      fontSize: collapsedPanelTitleSize,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "#fff4dc",
+                      lineHeight: 1.05,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {collapsedMissionTitle}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: panelHeadlineBox,
+                    height: panelHeadlineBox,
+                    border: "1px solid rgba(245, 215, 110, 0.4)",
+                    color: "#f5d76e",
+                    fontFamily: "var(--font-headline)",
+                    fontSize: panelHeadlineSize,
+                    fontWeight: 700,
+                    flex: "0 0 auto",
+                  }}
+                >
+                  2
+                </div>
+              )}
+
+              <button
+                type="button"
+                aria-expanded={!missionPanelCollapsed}
+                aria-label={missionPanelCollapsed ? "Expand mission panel" : "Collapse mission panel"}
+                onClick={() => setMissionPanelCollapsed((prev) => !prev)}
+                style={{
+                  width: panelToggleSize,
+                  height: panelToggleSize,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flex: "0 0 auto",
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 244, 220, 0.12)",
+                  color: "#cfc6b1",
+                  cursor: "pointer",
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: panelToggleIconSize }}>
+                  {missionPanelCollapsed ? "chevron_right" : "chevron_left"}
                 </span>
-              ))}
+              </button>
             </div>
+
+            {!missionPanelCollapsed && (
+              <>
+                <div
+                  style={{
+                    marginTop: clamp(12 * uiScale, 8, 12),
+                    fontFamily: "var(--font-headline)",
+                    fontSize: panelTitleSize,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#fff4dc",
+                    lineHeight: 1.04,
+                  }}
+                >
+                  Mission Control Floor
+                </div>
+                <div
+                  style={{
+                    marginTop: clamp(10 * uiScale, 8, 12),
+                    maxWidth: headerPanelWidth * 0.76,
+                    fontFamily: "var(--font-body)",
+                    fontSize: panelBodySize,
+                    lineHeight: 1.45,
+                    color: "rgba(228, 224, 242, 0.88)",
+                  }}
+                >
+                  Dense operational cockpit. Structured, focused, always-on.
+                </div>
+                <div
+                  style={{
+                    marginTop: clamp(14 * uiScale, 10, 18),
+                    display: "flex",
+                    gap: clamp(6 * uiScale, 4, 8),
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {sceneTags.map((label) => (
+                    <span
+                      key={label}
+                      style={{
+                        padding: `${chipPaddingY}px ${chipPaddingX}px`,
+                        fontFamily: "var(--font-label)",
+                        fontSize: panelLabelSize,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "#cfc6b1",
+                        border: "1px solid rgba(255, 244, 220, 0.12)",
+                        background: "rgba(255, 255, 255, 0.02)",
+                      }}
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div
@@ -1083,12 +1358,15 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
               top: sceneInset,
               right: sceneInset,
               zIndex: 6,
-              width: sidePanelWidth,
-              padding: `${clamp(18 * uiScale, 12, 18)}px ${panelPadding}px ${panelPadding}px`,
+              width: overlayPanelCollapsed ? collapsedOverlayPanelWidth : sidePanelWidth,
+              padding: overlayPanelCollapsed
+                ? `${collapsedPanelPaddingY}px ${collapsedPanelPaddingX}px`
+                : `${clamp(18 * uiScale, 12, 18)}px ${panelPadding}px ${panelPadding}px`,
               background: "linear-gradient(180deg, rgba(5, 7, 12, 0.9), rgba(5, 7, 12, 0.76))",
               border: "1px solid rgba(255, 244, 220, 0.14)",
               boxShadow: "0 18px 40px rgba(0, 0, 0, 0.26)",
               backdropFilter: "blur(5px)",
+              transition: "width 180ms ease, padding 180ms ease, transform 180ms ease",
             }}
           >
             <div
@@ -1096,7 +1374,6 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: clamp(12 * uiScale, 8, 16),
                 fontFamily: "var(--font-label)",
                 fontSize: clamp(11 * uiScale, 9, 11),
                 letterSpacing: "0.12em",
@@ -1104,232 +1381,152 @@ export function OfficeView({ activeTab, onNavigate, onOpenAgentChat }: OfficeVie
                 color: "#98907d",
               }}
             >
-              <span>Live Overlay</span>
+              <span>{overlayPanelCollapsed ? collapsedOverlayTitle : "Live Overlay"}</span>
               <button
                 type="button"
-                onClick={() => setShowGraph((prev) => !prev)}
+                aria-expanded={!overlayPanelCollapsed}
+                aria-label={overlayPanelCollapsed ? "Expand overlay panel" : "Collapse overlay panel"}
+                onClick={() => setOverlayPanelCollapsed((prev) => !prev)}
                 style={{
-                  padding: `${clamp(6 * uiScale, 4, 6)}px ${clamp(8 * uiScale, 6, 8)}px`,
-                  background: showGraph ? "rgba(117, 188, 255, 0.16)" : "rgba(255, 255, 255, 0.04)",
-                  border: `1px solid ${showGraph ? "rgba(117, 188, 255, 0.34)" : "rgba(255, 244, 220, 0.12)"}`,
-                  color: showGraph ? "#9bd0ff" : "#cfc6b1",
-                  fontFamily: "var(--font-label)",
-                  fontSize: panelLabelSize,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
+                  width: panelToggleSize,
+                  height: panelToggleSize,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flex: "0 0 auto",
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 244, 220, 0.12)",
+                  color: "#cfc6b1",
                   cursor: "pointer",
                 }}
               >
-                {showGraph ? "Graph On" : "Graph Off"}
+                <span className="material-symbols-outlined" style={{ fontSize: panelToggleIconSize }}>
+                  {overlayPanelCollapsed ? "chevron_left" : "chevron_right"}
+                </span>
               </button>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: metricsColumns,
-                gap: clamp(10 * uiScale, 6, 10),
-              }}
-            >
-              {[
-                { label: "Visible", value: `${visibleEmployees}` },
-                { label: "Moving", value: `${movingAgents}` },
-                { label: "Waypoints", value: `${Object.keys(NAV_NODES).length}` },
-                { label: "Occluders", value: `${FOREGROUND_SLICES.length}` },
-              ].map((metric) => (
-                <div
-                  key={metric.label}
-                  style={{
-                    padding: `${clamp(12 * uiScale, 8, 12)}px ${clamp(12 * uiScale, 8, 12)}px ${clamp(13 * uiScale, 9, 13)}px`,
-                    background: "rgba(255, 255, 255, 0.03)",
-                    border: "1px solid rgba(255, 244, 220, 0.08)",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "var(--font-label)",
-                      fontSize: panelLabelSize,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      color: "#98907d",
-                      marginBottom: clamp(6 * uiScale, 4, 6),
-                    }}
-                  >
-                    {metric.label}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-headline)",
-                      fontSize: clamp(24 * uiScale, 16, 24),
-                      color: "#fff4dc",
-                    }}
-                  >
-                    {metric.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {inspectedAgent && (
+            {overlayPanelCollapsed ? (
               <div
                 style={{
-                  marginTop: clamp(14 * uiScale, 10, 16),
-                  paddingTop: clamp(12 * uiScale, 8, 15),
-                  borderTop: "1px solid rgba(255, 244, 220, 0.08)",
+                  marginTop: clamp(8 * uiScale, 6, 8),
+                  fontFamily: "var(--font-label)",
+                  fontSize: collapsedSummarySize,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#cfc6b1",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
-                <div
-                  style={{
-                    fontFamily: "var(--font-label)",
-                    fontSize: panelLabelSize,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "#98907d",
-                    marginBottom: clamp(8 * uiScale, 6, 8),
-                  }}
-                >
-                  {dragState?.started ? "Dragging Agent" : selectedAgentName ? "Selected Agent" : "Focused Agent"}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-headline)",
-                    fontSize: clamp(20 * uiScale, 16, 20),
-                    color: "#fff4dc",
-                  }}
-                >
-                  {formatAgentName(inspectedAgent.name)}
-                </div>
-                <div
-                  style={{
-                    marginTop: clamp(4 * uiScale, 3, 4),
-                    fontFamily: "var(--font-body)",
-                    fontSize: clamp(13 * uiScale, 11, 13),
-                    color: "rgba(228, 224, 242, 0.82)",
-                  }}
-                >
-                  {inspectedAgent.role} · {STATUS_LABELS[inspectedAgent.status]}
-                </div>
-                <div
-                  style={{
-                    marginTop: clamp(10 * uiScale, 6, 10),
-                    fontFamily: "var(--font-body)",
-                    fontSize: clamp(12 * uiScale, 10.5, 12),
-                    lineHeight: 1.55,
-                    color: "rgba(207, 198, 177, 0.92)",
-                  }}
-                >
-                  Click to open chat. Drag to move across the mission-control graph.
-                </div>
+                {compactSummary}
               </div>
+            ) : (
+              <>
+                <div
+                  style={{
+                    marginTop: clamp(12 * uiScale, 8, 16),
+                    display: "grid",
+                    gridTemplateColumns: metricsColumns,
+                    gap: clamp(10 * uiScale, 6, 10),
+                  }}
+                >
+                    {[
+                      { label: "Visible", value: `${visibleEmployees}` },
+                      { label: "Moving", value: `${movingAgents}` },
+                      { label: "Waypoints", value: `${Object.keys(NAV_NODES).length}` },
+                      { label: "Objects", value: `${SCENE_OBJECT_COUNT}` },
+                      { label: "Asset-Backed", value: `${SCENE_ASSET_LINKED_OBJECT_COUNT}` },
+                      { label: "Occluders", value: `${SCENE_OCCLUDER_COUNT}` },
+                    ].map((metric) => (
+                    <div
+                      key={metric.label}
+                      style={{
+                        padding: `${clamp(12 * uiScale, 8, 12)}px ${clamp(12 * uiScale, 8, 12)}px ${clamp(13 * uiScale, 9, 13)}px`,
+                        background: "rgba(255, 255, 255, 0.03)",
+                        border: "1px solid rgba(255, 244, 220, 0.08)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: "var(--font-label)",
+                          fontSize: panelLabelSize,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: "#98907d",
+                          marginBottom: clamp(6 * uiScale, 4, 6),
+                        }}
+                      >
+                        {metric.label}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-headline)",
+                          fontSize: clamp(24 * uiScale, 16, 24),
+                          color: "#fff4dc",
+                        }}
+                      >
+                        {metric.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {inspectedAgent && (
+                  <div
+                    style={{
+                      marginTop: clamp(14 * uiScale, 10, 16),
+                      paddingTop: clamp(12 * uiScale, 8, 15),
+                      borderTop: "1px solid rgba(255, 244, 220, 0.08)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--font-label)",
+                        fontSize: panelLabelSize,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: "#98907d",
+                        marginBottom: clamp(8 * uiScale, 6, 8),
+                      }}
+                    >
+                      {dragState?.started ? "Dragging Agent" : selectedAgentName ? "Selected Agent" : "Focused Agent"}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-headline)",
+                        fontSize: clamp(20 * uiScale, 16, 20),
+                        color: "#fff4dc",
+                      }}
+                    >
+                      {formatAgentName(inspectedAgent.name)}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: clamp(4 * uiScale, 3, 4),
+                        fontFamily: "var(--font-body)",
+                        fontSize: clamp(13 * uiScale, 11, 13),
+                        color: "rgba(228, 224, 242, 0.82)",
+                      }}
+                    >
+                      {inspectedAgent.role} · {STATUS_LABELS[inspectedAgent.status]}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: clamp(10 * uiScale, 6, 10),
+                        fontFamily: "var(--font-body)",
+                        fontSize: clamp(12 * uiScale, 10.5, 12),
+                        lineHeight: 1.55,
+                        color: "rgba(207, 198, 177, 0.92)",
+                      }}
+                    >
+                      Click to open chat. Drag to move across the office floor.
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          <div
-            style={{
-              position: "absolute",
-              left: `${FOUNDER_MARKER.x}%`,
-              top: `${FOUNDER_MARKER.y}%`,
-              transform: "translate(-50%, -50%)",
-              zIndex: 6,
-              display: "flex",
-              alignItems: "center",
-              gap: founderGap,
-              padding: founderPadding,
-              background: "rgba(5, 7, 12, 0.9)",
-              border: "1px solid rgba(245, 215, 110, 0.2)",
-              boxShadow: "0 14px 24px rgba(0, 0, 0, 0.26)",
-              backdropFilter: "blur(5px)",
-            }}
-          >
-            <div
-              style={{
-                width: clamp(34 * uiScale, 24, 34),
-                height: clamp(34 * uiScale, 24, 34),
-                background: "linear-gradient(180deg, #f5d76e, #d4a953)",
-                color: "#231b00",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "var(--font-headline)",
-                fontSize: clamp(16 * uiScale, 11, 16),
-                fontWeight: 700,
-              }}
-            >
-              Y
-            </div>
-            <div>
-              <div
-                style={{
-                  fontFamily: "var(--font-headline)",
-                  fontSize: clamp(16 * uiScale, 12, 16),
-                  color: "#fff4dc",
-                  lineHeight: 1,
-                }}
-              >
-                You
-              </div>
-              <div
-                style={{
-                  marginTop: clamp(4 * uiScale, 2, 4),
-                  fontFamily: "var(--font-label)",
-                  fontSize: panelLabelSize,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "#98907d",
-                }}
-              >
-                Founder
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              bottom: sceneInset,
-              transform: "translateX(-50%)",
-              zIndex: 6,
-              display: "flex",
-              alignItems: "center",
-              gap: dockGap,
-              padding: `${dockPaddingY}px ${dockPaddingX}px`,
-              background: "rgba(5, 7, 12, 0.9)",
-              border: "1px solid rgba(255, 244, 220, 0.14)",
-              boxShadow: "0 18px 40px rgba(0, 0, 0, 0.28)",
-              backdropFilter: "blur(5px)",
-              maxWidth: `calc(100% - ${sceneInset * 2}px)`,
-            }}
-          >
-            {OFFICE_DOCK_TABS.map((tab) => {
-              const selected = tab.key === activeTab;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => onNavigate(tab.key)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: clamp(10 * uiScale, 6, 10),
-                    minWidth: dockButtonMinWidth,
-                    padding: `${clamp(10 * uiScale, 7, 10)}px ${clamp(14 * uiScale, 8, 14)}px`,
-                    background: selected ? "rgba(245, 215, 110, 0.12)" : "transparent",
-                    border: `1px solid ${selected ? "rgba(245, 215, 110, 0.32)" : "transparent"}`,
-                    color: selected ? "#fff4dc" : "#98907d",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-label)",
-                    fontSize: clamp(11 * uiScale, 9, 11),
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: clamp(18 * uiScale, 14, 18) }}>
-                    {tab.icon}
-                  </span>
-                  {!veryCompactScene && <span>{tab.label}</span>}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>
