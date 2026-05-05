@@ -1,6 +1,6 @@
 mod daemon;
 
-use std::process::{Command, Stdio};
+use std::{path::PathBuf, process::{Command, Stdio}};
 
 use tauri::Manager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -24,19 +24,47 @@ pub(crate) fn wsl_command(program: &str) -> Command {
     }
 }
 
-/// Resolve the exe-os dist directory from the global npm install.
+/// Resolve the exe-os dist directory from a local workspace link first, then global npm install.
 pub(crate) fn resolve_exe_os_dist() -> Result<String, String> {
+    if let Ok(overridden) = std::env::var("EXE_OS_DIST") {
+        if !overridden.trim().is_empty() {
+            let path = PathBuf::from(overridden.trim());
+            if path.is_dir() {
+                return Ok(path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent().unwrap_or(&manifest_dir).to_path_buf();
+    let local_candidates = [
+        workspace_root.join("exe-os").join("dist"),
+        manifest_dir.join("node_modules").join("exe-os").join("dist"),
+        workspace_root.join("node_modules").join("exe-os").join("dist"),
+    ];
+
+    for path in local_candidates {
+        if path.is_dir() {
+            return Ok(path.to_string_lossy().to_string());
+        }
+    }
+
     let output = wsl_command("npm")
         .args(["root", "-g"])
         .output()
         .map_err(|e| format!("Failed to run npm: {}", e))?;
 
     if !output.status.success() {
-        return Err("npm root -g failed".into());
+        return Err("Unable to locate exe-os: no local dist and npm root -g failed.".into());
     }
 
     let global_root = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    Ok(format!("{}/exe-os/dist", global_root))
+    let global_dist = PathBuf::from(global_root).join("exe-os").join("dist");
+    if global_dist.is_dir() {
+        Ok(global_dist.to_string_lossy().to_string())
+    } else {
+        Err("Unable to locate exe-os dist directory from local workspace or npm global install.".into())
+    }
 }
 
 /// Run a Node.js one-liner that imports an exe-os module and prints JSON to stdout.

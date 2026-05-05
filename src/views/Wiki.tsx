@@ -37,6 +37,12 @@ const NODE_COLORS: Record<WikiNode["type"], string> = {
   decision: "#22C55E",
 };
 
+function getFontFamily(cssVarName: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(cssVarName).trim();
+  return value || fallback;
+}
+
 // ---------------------------------------------------------------------------
 // Mode type
 // ---------------------------------------------------------------------------
@@ -403,6 +409,7 @@ function GraphMode() {
   // Initialize vis.js network when nodes/edges change
   useEffect(() => {
     if (!graphRef.current) return;
+    const graphFont = getFontFamily("--font-label", '"Space Grotesk", sans-serif');
 
     const visNodes = new DataSet(
       nodes.map((n) => ({
@@ -414,7 +421,7 @@ function GraphMode() {
           highlight: { background: NODE_COLORS[n.type], border: "#fff4dc" },
           hover: { background: NODE_COLORS[n.type], border: "#fff4dc" },
         },
-        font: { color: "#0e0d19", face: "Space Grotesk, sans-serif", size: 12 + n.degree },
+        font: { color: "#0e0d19", face: graphFont, size: 12 + n.degree },
         size: 10 + n.degree * 2,
         shape: n.type === "person" ? "dot" : n.type === "decision" ? "diamond" : "dot",
         borderWidth: 0,
@@ -430,7 +437,7 @@ function GraphMode() {
         label: e.label,
         width: 1 + e.weight * 2,
         color: { color: `rgba(76, 70, 55, ${0.3 + e.confidence * 0.7})`, highlight: "#F5D76E", hover: "#cfc6b1" },
-        font: { color: "#98907d", size: 10, face: "Space Grotesk, sans-serif", strokeWidth: 0 },
+        font: { color: "#98907d", size: 10, face: graphFont, strokeWidth: 0 },
         arrows: { to: { enabled: true, scaleFactor: 0.5 } },
         smooth: { enabled: true, type: "continuous", roundness: 0.5 },
       })),

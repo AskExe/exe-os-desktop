@@ -1,5 +1,3 @@
-import React from "react";
-
 export type TabKey = "office" | "work" | "wiki" | "crm" | "team" | "settings";
 
 interface TabDef {
@@ -61,7 +59,7 @@ export function Sidebar({
             opacity: 0.7,
           }}
         >
-          ANALOG TERMINAL v1.0
+          MISSION CONTROL
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchTasks, type Task } from "../services/exeOsData.js";
 import { ChatView } from "./ChatView.js";
 import { SessionControls } from "../components/SessionControls.js";
@@ -7,10 +7,13 @@ type StatusFilter = "all" | Task["status"];
 type PriorityFilter = "all" | Task["priority"];
 export type WorkMode = "tasks" | "chat";
 
+interface WorkChatRequest {
+  employeeName?: string;
+  nonce: number;
+}
+
 interface WorkViewProps {
-  focusedEmployeeName?: string;
-  requestToken?: number;
-  requestedMode?: WorkMode;
+  chatRequest?: WorkChatRequest | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,11 +242,7 @@ const s = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function WorkView({
-  focusedEmployeeName,
-  requestToken,
-  requestedMode,
-}: WorkViewProps = {}) {
+export function WorkView({ chatRequest }: WorkViewProps = {}) {
   const [mode, setMode] = useState<WorkMode>("tasks");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reviewTasks, setReviewTasks] = useState<Task[]>([]);
@@ -251,9 +250,10 @@ export function WorkView({
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [officeFocusAgent, setOfficeFocusAgent] = useState<string | undefined>(
-    focusedEmployeeName,
+  const [requestedAgentName, setRequestedAgentName] = useState<string | undefined>(
+    undefined,
   );
+  const [requestToken, setRequestToken] = useState<number>(0);
 
   useEffect(() => {
     fetchTasks().then(({ tasks: t, reviewTasks: r }) => {
@@ -263,13 +263,12 @@ export function WorkView({
   }, []);
 
   useEffect(() => {
-    if (!requestToken && !requestedMode && !focusedEmployeeName) return;
-    if (requestedMode) setMode(requestedMode);
-    if (focusedEmployeeName) {
-      setOfficeFocusAgent(focusedEmployeeName);
-      setActiveSessionId(null);
-    }
-  }, [focusedEmployeeName, requestToken, requestedMode]);
+    if (!chatRequest) return;
+    setMode("chat");
+    setRequestedAgentName(chatRequest.employeeName);
+    setRequestToken(chatRequest.nonce);
+    setActiveSessionId(null);
+  }, [chatRequest]);
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -312,10 +311,10 @@ export function WorkView({
       {mode === "chat" ? (
         <div style={{ display: "flex", flex: 1, gap: 8, minHeight: 0 }}>
           <div style={{ width: 300, flexShrink: 0, overflow: "auto" }}>
-            {officeFocusAgent && (
+            {requestedAgentName && (
               <div style={s.officeFocusCard}>
                 <div style={s.officeFocusLabel}>Routed From Office</div>
-                <div style={s.officeFocusName}>{formatEmployeeName(officeFocusAgent)}</div>
+                <div style={s.officeFocusName}>{formatEmployeeName(requestedAgentName)}</div>
                 <div style={s.officeFocusBody}>
                   Selecting a live session for this agent when available. If one is
                   not running, the new-session form is prefilled.
@@ -324,7 +323,7 @@ export function WorkView({
             )}
             <SessionControls
               onSelectSession={setActiveSessionId}
-              preferredAgentId={officeFocusAgent}
+              requestedAgentName={requestedAgentName}
               requestToken={requestToken}
             />
           </div>

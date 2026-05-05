@@ -138,7 +138,7 @@ const headerStyle: React.CSSProperties = {
 };
 
 const headerTitleStyle: React.CSSProperties = {
-  fontFamily: "Epilogue, sans-serif",
+  fontFamily: "var(--font-headline)",
   fontSize: 14,
   fontWeight: 700,
   color: ON_SURFACE,
@@ -172,7 +172,7 @@ const fileRowStyle: React.CSSProperties = {
 };
 
 const labelStyle: React.CSSProperties = {
-  fontFamily: "Manrope, sans-serif",
+  fontFamily: "var(--font-body)",
   fontSize: 10,
   fontWeight: 600,
   color: ON_SURFACE_VARIANT,
@@ -183,7 +183,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 const toolNameStyle: React.CSSProperties = {
-  fontFamily: "'Space Grotesk', sans-serif",
+  fontFamily: "var(--font-label)",
   fontSize: 13,
   fontWeight: 600,
   color: GOLD,
@@ -193,14 +193,14 @@ const toolNameStyle: React.CSSProperties = {
 };
 
 const descTextStyle: React.CSSProperties = {
-  fontFamily: "Manrope, sans-serif",
+  fontFamily: "var(--font-body)",
   fontSize: 13,
   color: ON_SURFACE,
   lineHeight: 1.5,
 };
 
 const filePathStyle: React.CSSProperties = {
-  fontFamily: "'Space Grotesk', sans-serif",
+  fontFamily: "var(--font-label)",
   fontSize: 12,
   color: ON_SURFACE_VARIANT,
   wordBreak: "break-all" as const,
@@ -215,7 +215,7 @@ const actionsStyle: React.CSSProperties = {
 };
 
 const btnBase: React.CSSProperties = {
-  fontFamily: "Manrope, sans-serif",
+  fontFamily: "var(--font-body)",
   fontSize: 11,
   fontWeight: 700,
   textTransform: "uppercase" as const,

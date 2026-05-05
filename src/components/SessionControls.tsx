@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { agentService } from "../services/agentService.js";
 import type { SessionInfo } from "../services/agentTypes.js";
+import { fetchEmployees, fetchProviders } from "../services/exeOsData.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,7 +15,11 @@ interface DaemonStatus {
 }
 
 const AGENTS = ["yoshi", "tom", "mari", "sasha"] as const;
-const DEFAULT_MODEL = "claude-opus-4-6";
+const FALLBACK_MODELS = [
+  "claude-opus-4-6",
+  "claude-sonnet-4-6",
+  "claude-haiku-4-5-20251001",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -194,37 +199,112 @@ const s = {
 
 interface SessionControlsProps {
   onSelectSession?: (sessionId: string) => void;
-  preferredAgentId?: string;
+  requestedAgentName?: string;
   requestToken?: number;
 }
 
 export function SessionControls({
   onSelectSession,
-  preferredAgentId,
+  requestedAgentName,
   requestToken,
 }: SessionControlsProps = {}) {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [daemon, setDaemon] = useState<DaemonStatus | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [agentId, setAgentId] = useState<string>(AGENTS[0]);
-  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [model, setModel] = useState<string>(FALLBACK_MODELS[0]);
+  const [availableModels, setAvailableModels] = useState<string[]>([...FALLBACK_MODELS]);
   const [starting, setStarting] = useState(false);
   const [confirmStop, setConfirmStop] = useState<string | null>(null);
+  const [availableAgents, setAvailableAgents] = useState<string[]>([...AGENTS]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const connectingRef = useRef(false);
+  const connectedPortRef = useRef<number | null>(null);
+  const handledRequestRef = useRef<number>(0);
 
   // ---- Daemon status polling ----
+  const refreshSessions = useCallback(() => {
+    setSessions(agentService.listSessions());
+  }, []);
+
+  const ensureConnection = useCallback(
+    async (status: DaemonStatus) => {
+      if (!status.running) {
+        agentService.disconnect();
+        connectedPortRef.current = null;
+        return;
+      }
+      if (
+        agentService.isConnected() &&
+        connectedPortRef.current === status.port
+      ) {
+        return;
+      }
+      if (connectingRef.current) return;
+      connectingRef.current = true;
+      try {
+        await agentService.connect(status.port);
+        connectedPortRef.current = status.port;
+        refreshSessions();
+      } catch {
+        connectedPortRef.current = null;
+      } finally {
+        connectingRef.current = false;
+      }
+    },
+    [refreshSessions],
+  );
+
   const checkDaemon = useCallback(async () => {
     try {
       const status = await invoke<DaemonStatus>("daemon_status");
       setDaemon(status);
+      void ensureConnection(status);
     } catch {
       setDaemon({ running: false, port: 0, pid: 0 });
+      connectedPortRef.current = null;
+      agentService.disconnect();
     }
-  }, []);
+  }, [ensureConnection]);
 
-  // ---- Session polling ----
-  const refreshSessions = useCallback(() => {
-    setSessions(agentService.listSessions());
+  useEffect(() => {
+    fetchEmployees()
+      .then(({ employees }) => {
+        const names = Array.from(
+          new Set(employees.map((employee) => employee.name)),
+        ).sort((a, b) => a.localeCompare(b));
+        if (names.length > 0) {
+          setAvailableAgents(names);
+          setAgentId((current) => (names.includes(current) ? current : names[0]));
+        }
+      })
+      .catch(() => {
+        setAvailableAgents([...AGENTS]);
+      });
+
+    fetchProviders()
+      .then(({ providers }) => {
+        const providerModels = providers.flatMap((provider) =>
+          [provider.model, ...provider.models].filter(
+            (value): value is string =>
+              typeof value === "string" && value.trim().length > 0,
+          ),
+        );
+
+        const models = Array.from(
+          new Set(providerModels.map((value) => value.trim()).filter(Boolean)),
+        );
+
+        setAvailableModels(models.length > 0 ? models : [...FALLBACK_MODELS]);
+        setModel((current) => {
+          const options = models.length > 0 ? models : [...FALLBACK_MODELS];
+          return options.includes(current) ? current : options[0] ?? FALLBACK_MODELS[0];
+        });
+      })
+      .catch(() => {
+        setAvailableModels([...FALLBACK_MODELS]);
+        setModel((current) => (current ? current : FALLBACK_MODELS[0]));
+      });
   }, []);
 
   useEffect(() => {
@@ -248,39 +328,33 @@ export function SessionControls({
     };
   }, [checkDaemon, refreshSessions]);
 
-  useEffect(() => {
-    if (!preferredAgentId) return;
-
-    const matchingSession = sessions.find((session) => session.agentId === preferredAgentId);
-    if (matchingSession) {
-      onSelectSession?.(matchingSession.sessionId);
-      setShowForm(false);
-      return;
-    }
-
-    if ((AGENTS as readonly string[]).includes(preferredAgentId)) {
-      setAgentId(preferredAgentId);
-      setShowForm(true);
-    }
-  }, [onSelectSession, preferredAgentId, requestToken, sessions]);
-
   // ---- Actions ----
+  const startSession = useCallback(
+    async (nextAgentId: string, nextModel: string) => {
+      if (!daemon?.running || !agentService.isConnected()) return null;
+      setStarting(true);
+      try {
+        const sessionId = await agentService.startSession({
+          agentId: nextAgentId,
+          model: nextModel,
+          systemPrompt: "",
+        });
+        refreshSessions();
+        onSelectSession?.(sessionId);
+        setShowForm(false);
+        return sessionId;
+      } catch {
+        return null;
+      } finally {
+        setStarting(false);
+      }
+    },
+    [daemon?.running, onSelectSession, refreshSessions],
+  );
+
   const handleStart = async () => {
     if (!daemon?.running) return;
-    setStarting(true);
-    try {
-      await agentService.startSession({
-        agentId,
-        model,
-        systemPrompt: "",
-      });
-      refreshSessions();
-      setShowForm(false);
-    } catch {
-      // error handled by agentService event system
-    } finally {
-      setStarting(false);
-    }
+    await startSession(agentId, model);
   };
 
   const handleStop = (sessionId: string) => {
@@ -295,6 +369,56 @@ export function SessionControls({
   };
 
   const daemonRunning = daemon?.running ?? false;
+  const agentOptions = Array.from(
+    new Set([
+      ...availableAgents,
+      ...(requestedAgentName ? [requestedAgentName] : []),
+    ]),
+  ).sort((a, b) => a.localeCompare(b));
+
+  useEffect(() => {
+    if (!requestToken || requestToken === handledRequestRef.current) return;
+    if (!requestedAgentName) {
+      handledRequestRef.current = requestToken;
+      return;
+    }
+
+    setAgentId(requestedAgentName);
+    setShowForm(true);
+
+    const existing = sessions.find(
+      (session) =>
+        session.status === "running" && session.agentId === requestedAgentName,
+    );
+    if (existing) {
+      handledRequestRef.current = requestToken;
+      setShowForm(false);
+      onSelectSession?.(existing.sessionId);
+      return;
+    }
+
+    if (!daemonRunning || !agentService.isConnected() || starting) {
+      return;
+    }
+
+    handledRequestRef.current = requestToken;
+    void startSession(requestedAgentName, model).then((sessionId) => {
+      if (sessionId) {
+        setShowForm(false);
+      } else {
+        handledRequestRef.current = 0;
+      }
+    });
+  }, [
+    daemonRunning,
+    model,
+    onSelectSession,
+    requestToken,
+    requestedAgentName,
+    sessions,
+    startSession,
+    starting,
+  ]);
 
   return (
     <div style={s.container}>
@@ -345,7 +469,7 @@ export function SessionControls({
                 value={agentId}
                 onChange={(e) => setAgentId(e.target.value)}
               >
-                {AGENTS.map((a) => (
+                {agentOptions.map((a) => (
                   <option key={a} value={a}>
                     {a}
                   </option>
@@ -359,9 +483,11 @@ export function SessionControls({
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
               >
-                <option value="claude-opus-4-6">claude-opus-4-6</option>
-                <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-                <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
+                {availableModels.map((candidate) => (
+                  <option key={candidate} value={candidate}>
+                    {candidate}
+                  </option>
+                ))}
               </select>
             </div>
             <div style={s.formActions}>
@@ -415,7 +541,10 @@ export function SessionControls({
                 {session.status === "running" && (
                   <button
                     style={s.stopBtn}
-                    onClick={() => handleStop(session.sessionId)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStop(session.sessionId);
+                    }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "#E74C3C30";
                     }}

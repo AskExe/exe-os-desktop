@@ -1,4 +1,4 @@
-@import './fonts.css';
+@import '/fonts.css';
 
 /* Exe Foundry Bold — global styles */
 
@@ -30,6 +30,7 @@
   --font-headline: 'Epilogue', sans-serif;
   --font-body: 'Manrope', sans-serif;
   --font-label: 'Space Grotesk', sans-serif;
+  --font-mono: "Space Grotesk", "Courier New", monospace;
 
   --sidebar-w: 200px;
   --topbar-h: 64px;
