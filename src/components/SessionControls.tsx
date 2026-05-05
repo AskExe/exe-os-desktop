@@ -194,9 +194,15 @@ const s = {
 
 interface SessionControlsProps {
   onSelectSession?: (sessionId: string) => void;
+  preferredAgentId?: string;
+  requestToken?: number;
 }
 
-export function SessionControls({ onSelectSession }: SessionControlsProps = {}) {
+export function SessionControls({
+  onSelectSession,
+  preferredAgentId,
+  requestToken,
+}: SessionControlsProps = {}) {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [daemon, setDaemon] = useState<DaemonStatus | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -241,6 +247,22 @@ export function SessionControls({ onSelectSession }: SessionControlsProps = {}) 
       unsub();
     };
   }, [checkDaemon, refreshSessions]);
+
+  useEffect(() => {
+    if (!preferredAgentId) return;
+
+    const matchingSession = sessions.find((session) => session.agentId === preferredAgentId);
+    if (matchingSession) {
+      onSelectSession?.(matchingSession.sessionId);
+      setShowForm(false);
+      return;
+    }
+
+    if ((AGENTS as readonly string[]).includes(preferredAgentId)) {
+      setAgentId(preferredAgentId);
+      setShowForm(true);
+    }
+  }, [onSelectSession, preferredAgentId, requestToken, sessions]);
 
   // ---- Actions ----
   const handleStart = async () => {

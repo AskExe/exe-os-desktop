@@ -5,7 +5,13 @@ import { SessionControls } from "../components/SessionControls.js";
 
 type StatusFilter = "all" | Task["status"];
 type PriorityFilter = "all" | Task["priority"];
-type WorkMode = "tasks" | "chat";
+export type WorkMode = "tasks" | "chat";
+
+interface WorkViewProps {
+  focusedEmployeeName?: string;
+  requestToken?: number;
+  requestedMode?: WorkMode;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -38,6 +44,10 @@ function timeAgo(dateStr: string): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function formatEmployeeName(name: string): string {
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : "";
 }
 
 // ---------------------------------------------------------------------------
@@ -196,13 +206,44 @@ const s = {
     color: "var(--outline)",
     padding: "8px 16px",
   },
+  officeFocusCard: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 8,
+    padding: 16,
+    marginBottom: 12,
+    background: "var(--surface-low)",
+    border: "1px solid var(--outline-variant)",
+  },
+  officeFocusLabel: {
+    fontFamily: "var(--font-label)",
+    fontSize: 10,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase" as const,
+    color: "var(--outline)",
+  },
+  officeFocusName: {
+    fontFamily: "var(--font-headline)",
+    fontSize: 18,
+    color: "var(--primary-container)",
+  },
+  officeFocusBody: {
+    fontFamily: "var(--font-body)",
+    fontSize: 13,
+    color: "var(--on-surface-variant)",
+    lineHeight: 1.5,
+  },
 };
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function WorkView() {
+export function WorkView({
+  focusedEmployeeName,
+  requestToken,
+  requestedMode,
+}: WorkViewProps = {}) {
   const [mode, setMode] = useState<WorkMode>("tasks");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reviewTasks, setReviewTasks] = useState<Task[]>([]);
@@ -210,6 +251,9 @@ export function WorkView() {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [officeFocusAgent, setOfficeFocusAgent] = useState<string | undefined>(
+    focusedEmployeeName,
+  );
 
   useEffect(() => {
     fetchTasks().then(({ tasks: t, reviewTasks: r }) => {
@@ -217,6 +261,15 @@ export function WorkView() {
       setReviewTasks(r);
     });
   }, []);
+
+  useEffect(() => {
+    if (!requestToken && !requestedMode && !focusedEmployeeName) return;
+    if (requestedMode) setMode(requestedMode);
+    if (focusedEmployeeName) {
+      setOfficeFocusAgent(focusedEmployeeName);
+      setActiveSessionId(null);
+    }
+  }, [focusedEmployeeName, requestToken, requestedMode]);
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -259,7 +312,21 @@ export function WorkView() {
       {mode === "chat" ? (
         <div style={{ display: "flex", flex: 1, gap: 8, minHeight: 0 }}>
           <div style={{ width: 300, flexShrink: 0, overflow: "auto" }}>
-            <SessionControls onSelectSession={setActiveSessionId} />
+            {officeFocusAgent && (
+              <div style={s.officeFocusCard}>
+                <div style={s.officeFocusLabel}>Routed From Office</div>
+                <div style={s.officeFocusName}>{formatEmployeeName(officeFocusAgent)}</div>
+                <div style={s.officeFocusBody}>
+                  Selecting a live session for this agent when available. If one is
+                  not running, the new-session form is prefilled.
+                </div>
+              </div>
+            )}
+            <SessionControls
+              onSelectSession={setActiveSessionId}
+              preferredAgentId={officeFocusAgent}
+              requestToken={requestToken}
+            />
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
             {activeSessionId ? (
