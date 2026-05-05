@@ -80,7 +80,7 @@ const SPEED_BY_STATUS: Record<OfficeStatus, number> = {
   active: 9.4,
   working: 7.6,
   idle: 4.1,
-  offline: 0,
+  offline: 3.2,
 };
 
 function toOfficeEmployee(emp: Employee): OfficeEmployee {
@@ -96,7 +96,7 @@ function pauseForStatus(status: OfficeStatus): number {
     case "idle":
       return 1800 + Math.random() * 2200;
     case "offline":
-      return 999_999;
+      return 2400 + Math.random() * 2600;
   }
 }
 
@@ -139,7 +139,7 @@ function buildAgent(employee: OfficeEmployee, index: number): SceneAgent {
     facing: index % 2 === 0 ? 1 : -1,
     path: [],
     patrolNodes,
-    pauseMs: 400 + index * 260,
+    pauseMs: index * 220,
     speed: SPEED_BY_STATUS[employee.status],
     spriteSrc: agentSpriteFor(employee.name, index),
     x: node.x,
@@ -171,7 +171,7 @@ function syncAgents(prev: SceneAgent[], employees: OfficeEmployee[]): SceneAgent
       directionX: existing.directionX,
       directionY: existing.directionY,
       patrolNodes,
-      path: employee.status === "offline" ? [] : activePath,
+      path: activePath,
       spriteSrc: AGENT_SPRITES[employee.name] ?? existing.spriteSrc ?? agentSpriteFor(employee.name, index),
       x: NAV_NODES[existing.currentNodeId] ? existing.x : (fallbackNode?.x ?? existing.x),
       y: NAV_NODES[existing.currentNodeId] ? existing.y : (fallbackNode?.y ?? existing.y),
@@ -181,16 +181,6 @@ function syncAgents(prev: SceneAgent[], employees: OfficeEmployee[]): SceneAgent
 
 function tickAgents(prev: SceneAgent[], elapsedMs: number): SceneAgent[] {
   return prev.map((agent) => {
-    if (agent.status === "offline") {
-      return {
-        ...agent,
-        bobPhase: agent.bobPhase + elapsedMs * 0.0012,
-        pauseMs: pauseForStatus("offline"),
-        path: [],
-        speed: 0,
-      };
-    }
-
     let distanceMoved = 0;
     let currentNodeId = agent.currentNodeId;
     let directionX = agent.directionX;
@@ -435,8 +425,8 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
   const [focusedAgentName, setFocusedAgentName] = useState<string | null>(null);
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
-  const [missionPanelCollapsed, setMissionPanelCollapsed] = useState(false);
-  const [overlayPanelCollapsed, setOverlayPanelCollapsed] = useState(false);
+  const [missionPanelCollapsed, setMissionPanelCollapsed] = useState(true);
+  const [overlayPanelCollapsed, setOverlayPanelCollapsed] = useState(true);
   const [sceneBounds, setSceneBounds] = useState({ width: 0, height: 0 });
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -546,7 +536,7 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
   );
 
   const visibleEmployees = useMemo(
-    () => employees.filter((employee) => employee.status !== "offline").length,
+    () => employees.length,
     [employees],
   );
 
@@ -627,17 +617,6 @@ export function OfficeView({ onOpenAgentChat }: OfficeViewProps) {
         const targetNode = NAV_NODES[targetNodeId];
         if (!targetNode) return agent;
         const manualPath = shortestPath(startNodeId, targetNodeId).slice(1);
-        if (agent.status === "offline") {
-          return {
-            ...agent,
-            currentNodeId: targetNodeId,
-            path: [],
-            pauseMs: pauseForStatus("offline"),
-            x: targetNode.x,
-            y: targetNode.y,
-          };
-        }
-
         return {
           ...agent,
           currentNodeId: startNodeId,

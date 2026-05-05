@@ -1,44 +1,64 @@
 {
-  "version": 2,
+  "version": 3,
   "name": "Mission Control Floor",
+  "renderMode": "hd-plate",
   "canvas": {
-    "width": 2274,
-    "height": 1444
+    "width": 1552,
+    "height": 1013
   },
   "assets": {
     "background": "/virtual-office/scene-background.png",
+    "sourceBackground": "/virtual-office/mission-control-floor-clean.png",
     "foreground": "/virtual-office/scene-foreground.png"
   },
   "nav": {
-    "gridStartX": 5,
-    "gridEndX": 96,
-    "gridStartY": 44,
-    "gridEndY": 92,
-    "gridStep": 3,
-    "obstacleClearance": 1.45
+    "gridStartX": 4,
+    "gridEndX": 98,
+    "gridStartY": 31,
+    "gridEndY": 96,
+    "gridStep": 2.6,
+    "obstacleClearance": 1.75
   },
   "walkableZones": [
     {
-      "id": "mission-control-floor",
+      "id": "main-floor",
       "points": [
-        { "x": 6.6, "y": 42.9 },
-        { "x": 92.4, "y": 42.9 },
-        { "x": 95.9, "y": 92.1 },
-        { "x": 4, "y": 92.1 }
+        { "x": 0, "y": 55 },
+        { "x": 14, "y": 45 },
+        { "x": 33, "y": 40 },
+        { "x": 48, "y": 28 },
+        { "x": 74, "y": 31 },
+        { "x": 100, "y": 43 },
+        { "x": 100, "y": 92 },
+        { "x": 88, "y": 100 },
+        { "x": 19, "y": 100 },
+        { "x": 0, "y": 84 }
+      ]
+    },
+    {
+      "id": "upper-operations-deck",
+      "points": [
+        { "x": 31, "y": 30 },
+        { "x": 49, "y": 26 },
+        { "x": 74, "y": 30 },
+        { "x": 88, "y": 39 },
+        { "x": 76, "y": 50 },
+        { "x": 55, "y": 50 },
+        { "x": 42, "y": 43 }
       ]
     }
   ],
   "patrolAnchors": {
-    "westUpper": { "x": 39, "y": 58 },
-    "centerNorth": { "x": 57, "y": 54 },
-    "eastUpper": { "x": 65, "y": 58 },
-    "westSouth": { "x": 40, "y": 74 },
-    "southCenter": { "x": 48, "y": 64 },
-    "southEast": { "x": 74, "y": 66 },
-    "holoNorth": { "x": 74, "y": 61 },
-    "holoSouth": { "x": 73, "y": 84 },
-    "bottomWest": { "x": 16, "y": 83 },
-    "bottomCenter": { "x": 50, "y": 89 }
+    "westUpper": { "x": 31, "y": 53 },
+    "centerNorth": { "x": 58, "y": 43 },
+    "eastUpper": { "x": 75, "y": 48 },
+    "westSouth": { "x": 24.8, "y": 72.6 },
+    "southCenter": { "x": 40.4, "y": 64.8 },
+    "southEast": { "x": 72, "y": 76 },
+    "holoNorth": { "x": 79.4, "y": 51.8 },
+    "holoSouth": { "x": 74.2, "y": 77.8 },
+    "bottomWest": { "x": 24.8, "y": 77.8 },
+    "bottomCenter": { "x": 56, "y": 90.8 }
   },
   "defaultPatrolAnchorIds": ["westUpper", "centerNorth", "southCenter", "bottomCenter"],
   "patrolRouteAnchors": {
@@ -50,789 +70,371 @@
   },
   "objects": [
     {
-      "id": "north-wall-map",
-      "label": "North World Map",
-      "sourceAssetId": null,
-      "anchor": { "x": 29.2, "y": 22 },
-      "footprint": [
-        { "x": 16.8, "y": 11.5 },
-        { "x": 41.8, "y": 11.5 },
-        { "x": 41.8, "y": 32.6 },
-        { "x": 16.8, "y": 32.6 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "back",
-      "zLayer": 20
-    },
-    {
-      "id": "north-tactical-display",
-      "label": "North Tactical Display",
-      "sourceAssetId": null,
-      "anchor": { "x": 66.3, "y": 22 },
-      "footprint": [
-        { "x": 51.9, "y": 10.4 },
-        { "x": 80.7, "y": 10.4 },
-        { "x": 80.7, "y": 32.5 },
-        { "x": 51.9, "y": 32.5 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "back",
-      "zLayer": 20
-    },
-    {
-      "id": "east-status-display",
-      "label": "East Status Display",
-      "sourceAssetId": null,
-      "anchor": { "x": 87.5, "y": 22 },
-      "footprint": [
-        { "x": 82.8, "y": 12.1 },
-        { "x": 92.2, "y": 12.1 },
-        { "x": 92.2, "y": 31.5 },
-        { "x": 82.8, "y": 31.5 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "back",
-      "zLayer": 20
-    },
-    {
-      "id": "west-server-stack-a",
-      "label": "West Server Stack A",
-      "sourceAssetId": "SERVER_STACK",
-      "anchor": { "x": 11.2, "y": 50.5 },
-      "footprint": [
-        { "x": 8.4, "y": 38.6 },
-        { "x": 13.8, "y": 38.6 },
-        { "x": 14.4, "y": 52.2 },
-        { "x": 8.6, "y": 52.2 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 50,
-      "render": {
-        "assetPath": "furniture/SERVER_STACK/DOUBLE_BOOKSHELF.png",
-        "x": 255,
-        "y": 730,
-        "scale": 5.6
-      }
-    },
-    {
-      "id": "west-server-stack-b",
-      "label": "West Server Stack B",
-      "sourceAssetId": "SERVER_STACK",
-      "anchor": { "x": 20.7, "y": 49.9 },
-      "footprint": [
-        { "x": 17.9, "y": 38.4 },
-        { "x": 23.8, "y": 38.4 },
-        { "x": 24.6, "y": 51.6 },
-        { "x": 18.1, "y": 51.6 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 50,
-      "render": {
-        "assetPath": "furniture/SERVER_STACK/DOUBLE_BOOKSHELF.png",
-        "x": 470,
-        "y": 720,
-        "scale": 5.6
-      }
-    },
-    {
-      "id": "center-wall-status-panel",
-      "label": "Center Status Panel",
-      "sourceAssetId": "STATUS_PANEL",
-      "anchor": { "x": 48.8, "y": 28.1 },
-      "footprint": [
-        { "x": 46.6, "y": 22 },
-        { "x": 50.9, "y": 22 },
-        { "x": 50.9, "y": 29.8 },
-        { "x": 46.6, "y": 29.8 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "back",
-      "zLayer": 26,
-      "render": {
-        "assetPath": "furniture/STATUS_PANEL/SMALL_PAINTING_2.png",
-        "x": 1110,
-        "y": 405,
-        "scale": 5.5
-      }
-    },
-    {
-      "id": "east-wall-tactical-display",
-      "label": "East Tactical Display",
+      "id": "north-west-map-wall",
+      "label": "North West Map Wall",
       "sourceAssetId": "TACTICAL_DISPLAY",
-      "anchor": { "x": 66, "y": 29.8 },
+      "anchor": { "x": 33, "y": 22 },
       "footprint": [
-        { "x": 61.9, "y": 22 },
-        { "x": 70.1, "y": 22 },
-        { "x": 70.1, "y": 31.4 },
-        { "x": 61.9, "y": 31.4 }
+        { "x": 18, "y": 5 },
+        { "x": 47, "y": 5 },
+        { "x": 47, "y": 33 },
+        { "x": 18, "y": 33 }
       ],
       "blocksMovement": false,
       "occludesAgents": false,
       "orientation": "back",
-      "zLayer": 28,
-      "render": {
-        "assetPath": "furniture/TACTICAL_DISPLAY/LARGE_PAINTING.png",
-        "x": 1500,
-        "y": 430,
-        "scale": 5.6
-      }
+      "zLayer": 12
     },
     {
-      "id": "far-east-status-panel",
-      "label": "Far East Status Panel",
-      "sourceAssetId": "STATUS_PANEL",
-      "anchor": { "x": 85.3, "y": 29.1 },
+      "id": "north-east-map-wall",
+      "label": "North East Map Wall",
+      "sourceAssetId": "TACTICAL_DISPLAY",
+      "anchor": { "x": 66, "y": 20 },
       "footprint": [
-        { "x": 83.2, "y": 22.4 },
-        { "x": 87.4, "y": 22.4 },
-        { "x": 87.4, "y": 30.7 },
-        { "x": 83.2, "y": 30.7 }
+        { "x": 50, "y": 4 },
+        { "x": 87, "y": 4 },
+        { "x": 87, "y": 34 },
+        { "x": 50, "y": 34 }
       ],
       "blocksMovement": false,
       "occludesAgents": false,
       "orientation": "back",
-      "zLayer": 28,
-      "render": {
-        "assetPath": "furniture/STATUS_PANEL/SMALL_PAINTING_2.png",
-        "x": 1940,
-        "y": 420,
-        "scale": 5.5
-      }
+      "zLayer": 12
     },
     {
-      "id": "north-center-plant",
-      "label": "North Center Plant",
+      "id": "glass-server-room",
+      "label": "Glass Server Room",
+      "sourceAssetId": "SERVER_STACK",
+      "anchor": { "x": 91, "y": 23 },
+      "footprint": [
+        { "x": 86, "y": 12 },
+        { "x": 98, "y": 14 },
+        { "x": 98, "y": 36 },
+        { "x": 86, "y": 34 }
+      ],
+      "blocksMovement": false,
+      "occludesAgents": false,
+      "orientation": "back",
+      "zLayer": 14
+    },
+    {
+      "id": "west-garden-planter",
+      "label": "West Garden Planter",
       "sourceAssetId": "PLANT_2",
-      "anchor": { "x": 47.1, "y": 46.7 },
+      "anchor": { "x": 9.5, "y": 49 },
       "footprint": [
-        { "x": 45, "y": 41.4 },
-        { "x": 49.2, "y": 41.4 },
-        { "x": 49.3, "y": 47.4 },
-        { "x": 45.2, "y": 47.7 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 47,
-      "render": {
-        "assetPath": "furniture/PLANT_2/PLANT_2.png",
-        "x": 1070,
-        "y": 675,
-        "scale": 4.9
-      }
-    },
-    {
-      "id": "east-entry-plant",
-      "label": "East Entry Plant",
-      "sourceAssetId": "PLANT",
-      "anchor": { "x": 89.3, "y": 48.5 },
-      "footprint": [
-        { "x": 87.4, "y": 41.7 },
-        { "x": 91.3, "y": 41.7 },
-        { "x": 91.8, "y": 49.2 },
-        { "x": 88, "y": 49.5 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 49,
-      "render": {
-        "assetPath": "furniture/PLANT/PLANT.png",
-        "x": 2030,
-        "y": 700,
-        "scale": 4.9
-      }
-    },
-    {
-      "id": "west-upper-console-a",
-      "label": "West Upper Console A",
-      "sourceAssetId": "OPS_CONSOLE_FRONT",
-      "anchor": { "x": 21.8, "y": 59.2 },
-      "footprint": [
-        { "x": 18.2, "y": 48.4 },
-        { "x": 26.4, "y": 48.4 },
-        { "x": 28, "y": 61.5 },
-        { "x": 19, "y": 61.8 }
+        { "x": 1.5, "y": 39 },
+        { "x": 17, "y": 34 },
+        { "x": 20, "y": 51 },
+        { "x": 5, "y": 57 }
       ],
       "occlusionFootprint": [
-        { "x": 18.5, "y": 54.9 },
-        { "x": 28, "y": 54.9 },
-        { "x": 28, "y": 61.8 },
-        { "x": 18.8, "y": 61.8 }
+        { "x": 1.5, "y": 45 },
+        { "x": 18.5, "y": 42 },
+        { "x": 20, "y": 57 },
+        { "x": 5, "y": 61 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 59,
-      "render": {
-        "assetPath": "furniture/OPS_CONSOLE/DESK_FRONT.png",
-        "x": 495,
-        "y": 855,
-        "scale": 8.2,
-        "split": 0.57
-      }
-    },
-    {
-      "id": "west-upper-terminal-a",
-      "label": "West Upper Terminal A",
-      "sourceAssetId": "ANALYST_TERMINAL_FRONT_OFF",
-      "anchor": { "x": 23.3, "y": 58.5 },
-      "footprint": [
-        { "x": 21.7, "y": 52.2 },
-        { "x": 25, "y": 52.2 },
-        { "x": 25.2, "y": 59.2 },
-        { "x": 21.8, "y": 59.2 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "front",
-      "zLayer": 61,
-      "render": {
-        "assetPath": "furniture/ANALYST_TERMINAL/PC_FRONT_OFF.png",
-        "x": 530,
-        "y": 845,
-        "scale": 5.8
-      }
-    },
-    {
-      "id": "west-upper-console-b",
-      "label": "West Upper Console B",
-      "sourceAssetId": "OPS_CONSOLE_FRONT",
-      "anchor": { "x": 33.4, "y": 61.3 },
-      "footprint": [
-        { "x": 29.6, "y": 50.4 },
-        { "x": 37.7, "y": 50.4 },
-        { "x": 39, "y": 63.7 },
-        { "x": 30.2, "y": 64 }
-      ],
-      "occlusionFootprint": [
-        { "x": 29.8, "y": 56.8 },
-        { "x": 39, "y": 56.8 },
-        { "x": 39, "y": 64 },
-        { "x": 30, "y": 64 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 61,
-      "render": {
-        "assetPath": "furniture/OPS_CONSOLE/DESK_FRONT.png",
-        "x": 760,
-        "y": 885,
-        "scale": 8.2,
-        "split": 0.57
-      }
-    },
-    {
-      "id": "west-upper-terminal-b",
-      "label": "West Upper Terminal B",
-      "sourceAssetId": "ANALYST_TERMINAL_FRONT_OFF",
-      "anchor": { "x": 34.5, "y": 60.6 },
-      "footprint": [
-        { "x": 33, "y": 54 },
-        { "x": 36.2, "y": 54 },
-        { "x": 36.5, "y": 61.2 },
-        { "x": 33.1, "y": 61.2 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "front",
-      "zLayer": 63,
-      "render": {
-        "assetPath": "furniture/ANALYST_TERMINAL/PC_FRONT_OFF.png",
-        "x": 785,
-        "y": 875,
-        "scale": 5.8
-      }
-    },
-    {
-      "id": "west-upper-bench-a",
-      "label": "West Upper Bench A",
-      "sourceAssetId": "MISSION_BENCH",
-      "anchor": { "x": 23.5, "y": 66.7 },
-      "footprint": [
-        { "x": 21.8, "y": 64.2 },
-        { "x": 25.3, "y": 64.2 },
-        { "x": 25.3, "y": 68.5 },
-        { "x": 21.8, "y": 68.5 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": false,
-      "orientation": "front",
-      "zLayer": 67,
-      "render": {
-        "assetPath": "furniture/MISSION_BENCH/CUSHIONED_BENCH.png",
-        "x": 535,
-        "y": 963,
-        "scale": 5.6
-      }
-    },
-    {
-      "id": "west-upper-bench-b",
-      "label": "West Upper Bench B",
-      "sourceAssetId": "MISSION_BENCH",
-      "anchor": { "x": 35.6, "y": 68.6 },
-      "footprint": [
-        { "x": 33.8, "y": 66 },
-        { "x": 37.4, "y": 66 },
-        { "x": 37.4, "y": 70.2 },
-        { "x": 33.8, "y": 70.2 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": false,
-      "orientation": "front",
-      "zLayer": 69,
-      "render": {
-        "assetPath": "furniture/MISSION_BENCH/CUSHIONED_BENCH.png",
-        "x": 810,
-        "y": 990,
-        "scale": 5.6
-      }
-    },
-    {
-      "id": "east-upper-console",
-      "label": "East Upper Console",
-      "sourceAssetId": "OPS_CONSOLE_FRONT",
-      "anchor": { "x": 72.3, "y": 58.2 },
-      "footprint": [
-        { "x": 68.6, "y": 47.9 },
-        { "x": 76.1, "y": 47.9 },
-        { "x": 77.7, "y": 60.4 },
-        { "x": 69.4, "y": 60.7 }
-      ],
-      "occlusionFootprint": [
-        { "x": 68.8, "y": 53.8 },
-        { "x": 77.6, "y": 53.8 },
-        { "x": 77.7, "y": 60.8 },
-        { "x": 69.2, "y": 60.8 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 58,
-      "render": {
-        "assetPath": "furniture/OPS_CONSOLE/DESK_FRONT.png",
-        "x": 1645,
-        "y": 840,
-        "scale": 8,
-        "split": 0.57
-      }
-    },
-    {
-      "id": "east-upper-terminal",
-      "label": "East Upper Terminal",
-      "sourceAssetId": "ANALYST_TERMINAL_FRONT_OFF",
-      "anchor": { "x": 73.4, "y": 57.3 },
-      "footprint": [
-        { "x": 71.9, "y": 51.1 },
-        { "x": 75.1, "y": 51.1 },
-        { "x": 75.4, "y": 58.1 },
-        { "x": 72, "y": 58.1 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "front",
-      "zLayer": 60,
-      "render": {
-        "assetPath": "furniture/ANALYST_TERMINAL/PC_FRONT_OFF.png",
-        "x": 1670,
-        "y": 827,
-        "scale": 5.6
-      }
-    },
-    {
-      "id": "east-upper-bench",
-      "label": "East Upper Bench",
-      "sourceAssetId": "MISSION_BENCH",
-      "anchor": { "x": 73.4, "y": 66.5 },
-      "footprint": [
-        { "x": 71.6, "y": 64 },
-        { "x": 75.3, "y": 64 },
-        { "x": 75.3, "y": 68.2 },
-        { "x": 71.6, "y": 68.2 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": false,
-      "orientation": "front",
-      "zLayer": 67,
-      "render": {
-        "assetPath": "furniture/MISSION_BENCH/CUSHIONED_BENCH.png",
-        "x": 1668,
-        "y": 960,
-        "scale": 5.4
-      }
-    },
-    {
-      "id": "central-briefing-table-north",
-      "label": "Central Briefing Table North",
-      "sourceAssetId": "BRIEFING_TABLE",
-      "anchor": { "x": 51.9, "y": 75.5 },
-      "footprint": [
-        { "x": 44.8, "y": 67 },
-        { "x": 58.8, "y": 67 },
-        { "x": 61.4, "y": 78 },
-        { "x": 47.7, "y": 78.5 }
-      ],
-      "occlusionFootprint": [
-        { "x": 45, "y": 72.2 },
-        { "x": 61.4, "y": 72.2 },
-        { "x": 61.4, "y": 78.6 },
-        { "x": 47.7, "y": 78.6 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 76,
-      "render": {
-        "assetPath": "furniture/BRIEFING_TABLE/TABLE_FRONT.png",
-        "x": 1180,
-        "y": 1090,
-        "scale": 6.6,
-        "split": 0.62
-      }
-    },
-    {
-      "id": "central-terminal-west",
-      "label": "Central Terminal West",
-      "sourceAssetId": "ANALYST_TERMINAL_SIDE",
-      "anchor": { "x": 50.6, "y": 71.3 },
-      "footprint": [
-        { "x": 49.2, "y": 65.4 },
-        { "x": 51.8, "y": 65.4 },
-        { "x": 52, "y": 72 },
-        { "x": 49.3, "y": 72 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "side",
-      "zLayer": 72,
-      "render": {
-        "assetPath": "furniture/ANALYST_TERMINAL/PC_SIDE.png",
-        "x": 1150,
-        "y": 1030,
-        "scale": 5.2
-      }
-    },
-    {
-      "id": "central-terminal-east",
-      "label": "Central Terminal East",
-      "sourceAssetId": "ANALYST_TERMINAL_SIDE",
-      "anchor": { "x": 58, "y": 71.6 },
-      "footprint": [
-        { "x": 56.6, "y": 65.5 },
-        { "x": 59.2, "y": 65.5 },
-        { "x": 59.4, "y": 72.2 },
-        { "x": 56.8, "y": 72.2 }
-      ],
-      "blocksMovement": false,
-      "occludesAgents": false,
-      "orientation": "side",
-      "zLayer": 72,
-      "render": {
-        "assetPath": "furniture/ANALYST_TERMINAL/PC_SIDE.png",
-        "x": 1320,
-        "y": 1035,
-        "scale": 5.2,
-        "mirror": true
-      }
-    },
-    {
-      "id": "central-briefing-table-west",
-      "label": "Central Briefing Table West",
-      "sourceAssetId": "BRIEFING_TABLE",
-      "anchor": { "x": 47.7, "y": 81.4 },
-      "footprint": [
-        { "x": 40.8, "y": 73.3 },
-        { "x": 53.6, "y": 73.3 },
-        { "x": 56, "y": 84.2 },
-        { "x": 43, "y": 84.5 }
-      ],
-      "occlusionFootprint": [
-        { "x": 41, "y": 78.5 },
-        { "x": 56, "y": 78.5 },
-        { "x": 56, "y": 84.6 },
-        { "x": 42.9, "y": 84.6 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 82,
-      "render": {
-        "assetPath": "furniture/BRIEFING_TABLE/TABLE_FRONT.png",
-        "x": 1085,
-        "y": 1175,
-        "scale": 6.6,
-        "split": 0.62
-      }
-    },
-    {
-      "id": "central-briefing-table-east",
-      "label": "Central Briefing Table East",
-      "sourceAssetId": "BRIEFING_TABLE",
-      "anchor": { "x": 55.8, "y": 81.4 },
-      "footprint": [
-        { "x": 48.8, "y": 73.3 },
-        { "x": 61.6, "y": 73.3 },
-        { "x": 64.1, "y": 84.2 },
-        { "x": 51, "y": 84.5 }
-      ],
-      "occlusionFootprint": [
-        { "x": 49, "y": 78.5 },
-        { "x": 64, "y": 78.5 },
-        { "x": 64.1, "y": 84.6 },
-        { "x": 51, "y": 84.6 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 82,
-      "render": {
-        "assetPath": "furniture/BRIEFING_TABLE/TABLE_FRONT.png",
-        "x": 1270,
-        "y": 1175,
-        "scale": 6.6,
-        "split": 0.62
-      }
-    },
-    {
-      "id": "central-chair-west",
-      "label": "Central West Chair",
-      "sourceAssetId": "WOODEN_CHAIR_SIDE",
-      "anchor": { "x": 43.5, "y": 80.3 },
-      "footprint": [
-        { "x": 42.2, "y": 75.8 },
-        { "x": 44.7, "y": 75.8 },
-        { "x": 45.1, "y": 81.2 },
-        { "x": 42.4, "y": 81.2 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "side",
-      "zLayer": 80,
-      "render": {
-        "assetPath": "furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png",
-        "x": 990,
-        "y": 1160,
-        "scale": 5.2
-      }
-    },
-    {
-      "id": "central-chair-east",
-      "label": "Central East Chair",
-      "sourceAssetId": "WOODEN_CHAIR_SIDE",
-      "anchor": { "x": 60.2, "y": 80.3 },
-      "footprint": [
-        { "x": 58.8, "y": 75.8 },
-        { "x": 61.4, "y": 75.8 },
-        { "x": 61.7, "y": 81.2 },
-        { "x": 59, "y": 81.2 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "side",
-      "zLayer": 80,
-      "render": {
-        "assetPath": "furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png",
-        "x": 1368,
-        "y": 1160,
-        "scale": 5.2,
-        "mirror": true
-      }
-    },
-    {
-      "id": "lower-west-console",
-      "label": "Lower West Console",
-      "sourceAssetId": "OPS_CONSOLE_FRONT",
-      "anchor": { "x": 27.5, "y": 82.4 },
-      "footprint": [
-        { "x": 21.4, "y": 72.4 },
-        { "x": 33.9, "y": 72.4 },
-        { "x": 35.8, "y": 84.7 },
-        { "x": 24.4, "y": 85 }
-      ],
-      "occlusionFootprint": [
-        { "x": 21.6, "y": 78.2 },
-        { "x": 35.8, "y": 78.2 },
-        { "x": 35.8, "y": 85 },
-        { "x": 24.4, "y": 85 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 82,
-      "render": {
-        "assetPath": "furniture/OPS_CONSOLE/DESK_FRONT.png",
-        "x": 625,
-        "y": 1190,
-        "scale": 8,
-        "split": 0.55
-      }
-    },
-    {
-      "id": "lower-west-chair",
-      "label": "Lower West Chair",
-      "sourceAssetId": "WOODEN_CHAIR_SIDE",
-      "anchor": { "x": 23.5, "y": 80.3 },
-      "footprint": [
-        { "x": 22.1, "y": 75.8 },
-        { "x": 24.8, "y": 75.8 },
-        { "x": 25.1, "y": 81.2 },
-        { "x": 22.3, "y": 81.2 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": true,
-      "orientation": "side",
-      "zLayer": 80,
-      "render": {
-        "assetPath": "furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png",
-        "x": 535,
-        "y": 1160,
-        "scale": 5.2
-      }
-    },
-    {
-      "id": "holo-platform",
-      "label": "Hologram Platform",
-      "sourceAssetId": null,
-      "anchor": { "x": 83.5, "y": 75.4 },
-      "footprint": [
-        { "x": 76.8, "y": 70.4 },
-        { "x": 83.4, "y": 66.4 },
-        { "x": 90.5, "y": 70.4 },
-        { "x": 90.2, "y": 79.7 },
-        { "x": 83.4, "y": 83.2 },
-        { "x": 76.4, "y": 79.5 }
-      ],
-      "blocksMovement": true,
-      "occludesAgents": false,
       "orientation": "custom",
-      "zLayer": 76
+      "zLayer": 48
     },
     {
-      "id": "far-east-console",
-      "label": "Far East Console",
+      "id": "north-ops-console-bank",
+      "label": "North Ops Console Bank",
       "sourceAssetId": "OPS_CONSOLE_FRONT",
-      "anchor": { "x": 85.8, "y": 75.1 },
+      "anchor": { "x": 35, "y": 43 },
       "footprint": [
-        { "x": 79.2, "y": 65.7 },
-        { "x": 91.7, "y": 65.7 },
-        { "x": 92.8, "y": 77.6 },
-        { "x": 81, "y": 77.9 }
+        { "x": 24, "y": 34 },
+        { "x": 46.5, "y": 32 },
+        { "x": 48, "y": 48.5 },
+        { "x": 26.5, "y": 52.5 }
       ],
       "occlusionFootprint": [
-        { "x": 79.4, "y": 71.5 },
-        { "x": 92.7, "y": 71.5 },
-        { "x": 92.8, "y": 78 },
-        { "x": 81, "y": 78 }
+        { "x": 24.5, "y": 43 },
+        { "x": 48.5, "y": 43 },
+        { "x": 48.2, "y": 52.5 },
+        { "x": 26.5, "y": 55 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 75,
-      "render": {
-        "assetPath": "furniture/OPS_CONSOLE/DESK_FRONT.png",
-        "x": 1950,
-        "y": 1085,
-        "scale": 8.2,
-        "split": 0.55
-      }
+      "zLayer": 52
     },
     {
-      "id": "far-east-chair",
-      "label": "Far East Chair",
-      "sourceAssetId": "WOODEN_CHAIR_SIDE",
-      "anchor": { "x": 88.8, "y": 72.7 },
+      "id": "center-analyst-island",
+      "label": "Center Analyst Island",
+      "sourceAssetId": "OPS_CONSOLE_FRONT",
+      "anchor": { "x": 44, "y": 52 },
       "footprint": [
-        { "x": 87.3, "y": 68.1 },
-        { "x": 89.9, "y": 68.1 },
-        { "x": 90.3, "y": 73.6 },
-        { "x": 87.5, "y": 73.6 }
+        { "x": 35, "y": 43 },
+        { "x": 53, "y": 40 },
+        { "x": 55, "y": 56 },
+        { "x": 38, "y": 61 }
+      ],
+      "occlusionFootprint": [
+        { "x": 35.5, "y": 50 },
+        { "x": 55.2, "y": 50 },
+        { "x": 55, "y": 60 },
+        { "x": 38, "y": 63 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
-      "orientation": "side",
-      "zLayer": 73,
-      "render": {
-        "assetPath": "furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png",
-        "x": 2020,
-        "y": 1050,
-        "scale": 5.2,
-        "mirror": true
-      }
+      "orientation": "front",
+      "zLayer": 60
     },
     {
-      "id": "southwest-plant",
-      "label": "Southwest Plant",
+      "id": "east-command-desk",
+      "label": "East Command Desk",
+      "sourceAssetId": "DESK_FRONT",
+      "anchor": { "x": 88, "y": 46 },
+      "footprint": [
+        { "x": 78.5, "y": 35 },
+        { "x": 96, "y": 39 },
+        { "x": 97.5, "y": 52.5 },
+        { "x": 82, "y": 56 }
+      ],
+      "occlusionFootprint": [
+        { "x": 80, "y": 45 },
+        { "x": 97, "y": 47 },
+        { "x": 97.5, "y": 56 },
+        { "x": 82, "y": 58 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "front",
+      "zLayer": 56
+    },
+    {
+      "id": "east-garden-desk",
+      "label": "East Garden Desk",
+      "sourceAssetId": "DESK_FRONT",
+      "anchor": { "x": 95, "y": 56 },
+      "footprint": [
+        { "x": 91, "y": 45 },
+        { "x": 100, "y": 49 },
+        { "x": 100, "y": 62 },
+        { "x": 91, "y": 59 }
+      ],
+      "occlusionFootprint": [
+        { "x": 91, "y": 54 },
+        { "x": 100, "y": 56 },
+        { "x": 100, "y": 64 },
+        { "x": 91, "y": 62 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "front",
+      "zLayer": 62
+    },
+    {
+      "id": "west-support-console",
+      "label": "West Support Console",
+      "sourceAssetId": "OPS_CONSOLE_FRONT",
+      "anchor": { "x": 21, "y": 64 },
+      "footprint": [
+        { "x": 10, "y": 56 },
+        { "x": 29, "y": 52 },
+        { "x": 33, "y": 66.5 },
+        { "x": 13, "y": 72.5 }
+      ],
+      "occlusionFootprint": [
+        { "x": 11, "y": 62 },
+        { "x": 33, "y": 62 },
+        { "x": 33, "y": 72.5 },
+        { "x": 13, "y": 75 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "front",
+      "zLayer": 72
+    },
+    {
+      "id": "west-front-plant-rail",
+      "label": "West Front Plant Rail",
       "sourceAssetId": "PLANT",
-      "anchor": { "x": 6.2, "y": 86.2 },
+      "anchor": { "x": 12, "y": 65 },
       "footprint": [
-        { "x": 4.5, "y": 80 },
-        { "x": 7.9, "y": 80 },
-        { "x": 8.4, "y": 87.8 },
-        { "x": 4.8, "y": 88.4 }
+        { "x": 4, "y": 58 },
+        { "x": 18, "y": 54 },
+        { "x": 19, "y": 70 },
+        { "x": 6, "y": 74 }
+      ],
+      "occlusionFootprint": [
+        { "x": 3.5, "y": 64 },
+        { "x": 19, "y": 61 },
+        { "x": 19, "y": 74 },
+        { "x": 6, "y": 77 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "custom",
+      "zLayer": 74
+    },
+    {
+      "id": "central-command-table",
+      "label": "Central Command Table",
+      "sourceAssetId": "BRIEFING_TABLE",
+      "anchor": { "x": 61, "y": 67 },
+      "footprint": [
+        { "x": 46.5, "y": 54 },
+        { "x": 70.5, "y": 48 },
+        { "x": 82, "y": 65 },
+        { "x": 58, "y": 80 },
+        { "x": 41.5, "y": 68 }
+      ],
+      "occlusionFootprint": [
+        { "x": 42, "y": 66 },
+        { "x": 82, "y": 64 },
+        { "x": 76, "y": 78 },
+        { "x": 56, "y": 84 },
+        { "x": 42, "y": 72 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 86,
-      "render": {
-        "assetPath": "furniture/PLANT/PLANT.png",
-        "x": 142,
-        "y": 1245,
-        "scale": 5.4
-      }
+      "zLayer": 80
     },
     {
-      "id": "southwest-bin",
-      "label": "Southwest Bin",
-      "sourceAssetId": "BIN",
-      "anchor": { "x": 8, "y": 88 },
+      "id": "hologram-platform",
+      "label": "Hologram Platform",
+      "sourceAssetId": "HOLOGRAM_PLATFORM",
+      "anchor": { "x": 86, "y": 72 },
       "footprint": [
-        { "x": 6.9, "y": 85.4 },
-        { "x": 9.1, "y": 85.4 },
-        { "x": 9.3, "y": 88.9 },
-        { "x": 7, "y": 88.9 }
+        { "x": 79, "y": 55 },
+        { "x": 100, "y": 55 },
+        { "x": 100, "y": 79 },
+        { "x": 88, "y": 87 },
+        { "x": 75, "y": 73 }
+      ],
+      "occlusionFootprint": [
+        { "x": 76, "y": 70 },
+        { "x": 100, "y": 69 },
+        { "x": 100, "y": 85 },
+        { "x": 88, "y": 90 },
+        { "x": 76, "y": 78 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "custom",
+      "zLayer": 86
+    },
+    {
+      "id": "south-monitor-bank",
+      "label": "South Monitor Bank",
+      "sourceAssetId": "OPS_CONSOLE_FRONT",
+      "anchor": { "x": 44, "y": 85 },
+      "footprint": [
+        { "x": 29, "y": 74 },
+        { "x": 51, "y": 69 },
+        { "x": 63, "y": 84 },
+        { "x": 40, "y": 96 },
+        { "x": 24, "y": 86 }
+      ],
+      "occlusionFootprint": [
+        { "x": 25, "y": 84 },
+        { "x": 63, "y": 83 },
+        { "x": 57, "y": 98 },
+        { "x": 39, "y": 100 },
+        { "x": 25, "y": 90 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
       "orientation": "front",
-      "zLayer": 88,
-      "render": {
-        "assetPath": "furniture/BIN/BIN.png",
-        "x": 182,
-        "y": 1270,
-        "scale": 4.4
-      }
+      "zLayer": 96
     },
     {
-      "id": "southeast-plant",
-      "label": "Southeast Plant",
+      "id": "southeast-ops-desk",
+      "label": "Southeast Ops Desk",
+      "sourceAssetId": "OPS_CONSOLE_FRONT",
+      "anchor": { "x": 80, "y": 91 },
+      "footprint": [
+        { "x": 60, "y": 84 },
+        { "x": 80, "y": 78 },
+        { "x": 100, "y": 91 },
+        { "x": 100, "y": 100 },
+        { "x": 76, "y": 100 },
+        { "x": 60, "y": 94 }
+      ],
+      "occlusionFootprint": [
+        { "x": 60, "y": 92 },
+        { "x": 100, "y": 92 },
+        { "x": 100, "y": 100 },
+        { "x": 76, "y": 100 },
+        { "x": 60, "y": 96 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "front",
+      "zLayer": 100
+    },
+    {
+      "id": "southwest-garden-terrace",
+      "label": "Southwest Garden Terrace",
       "sourceAssetId": "PLANT_2",
-      "anchor": { "x": 93.7, "y": 85.5 },
+      "anchor": { "x": 29, "y": 92 },
       "footprint": [
-        { "x": 92, "y": 78.5 },
-        { "x": 95.7, "y": 78.5 },
-        { "x": 96.2, "y": 86 },
-        { "x": 92.4, "y": 86.8 }
+        { "x": 13, "y": 84 },
+        { "x": 38, "y": 80 },
+        { "x": 46, "y": 97 },
+        { "x": 32, "y": 100 },
+        { "x": 12, "y": 96 }
+      ],
+      "occlusionFootprint": [
+        { "x": 12, "y": 90 },
+        { "x": 42, "y": 86 },
+        { "x": 46, "y": 100 },
+        { "x": 14, "y": 100 }
       ],
       "blocksMovement": true,
       "occludesAgents": true,
-      "orientation": "front",
-      "zLayer": 86,
-      "render": {
-        "assetPath": "furniture/PLANT_2/PLANT_2.png",
-        "x": 2130,
-        "y": 1235,
-        "scale": 5.4
-      }
+      "orientation": "custom",
+      "zLayer": 101
+    },
+    {
+      "id": "southeast-garden-terrace",
+      "label": "Southeast Garden Terrace",
+      "sourceAssetId": "PLANT",
+      "anchor": { "x": 94, "y": 91 },
+      "footprint": [
+        { "x": 89, "y": 81 },
+        { "x": 100, "y": 77 },
+        { "x": 100, "y": 100 },
+        { "x": 91, "y": 100 }
+      ],
+      "occlusionFootprint": [
+        { "x": 89, "y": 87 },
+        { "x": 100, "y": 83 },
+        { "x": 100, "y": 100 },
+        { "x": 91, "y": 100 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "custom",
+      "zLayer": 101
+    },
+    {
+      "id": "lower-left-railing",
+      "label": "Lower Left Railing",
+      "sourceAssetId": "RAILING",
+      "anchor": { "x": 5, "y": 80 },
+      "footprint": [
+        { "x": 0, "y": 69 },
+        { "x": 9, "y": 65 },
+        { "x": 14, "y": 79 },
+        { "x": 2, "y": 88 },
+        { "x": 0, "y": 84 }
+      ],
+      "occlusionFootprint": [
+        { "x": 0, "y": 72 },
+        { "x": 10, "y": 68 },
+        { "x": 14, "y": 83 },
+        { "x": 0, "y": 91 }
+      ],
+      "blocksMovement": true,
+      "occludesAgents": true,
+      "orientation": "custom",
+      "zLayer": 102
     }
   ]
 }
